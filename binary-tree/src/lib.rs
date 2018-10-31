@@ -45,8 +45,7 @@ fn test_hand_building_tree_of_planets() {
         right: uranus_tree
     }));
 
-    assert_eq!(tree.walk(),
-               vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+    assert_eq!(tree.walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
 }
 
 impl<T: Clone> BinaryTree<T> {
@@ -57,6 +56,7 @@ impl<T: Clone> BinaryTree<T> {
                 let mut result = boxed.left.walk();
                 result.push(boxed.element.clone());
                 result.extend(boxed.right.walk());
+
                 result
             }
         }
@@ -105,4 +105,33 @@ fn test_add_method_2() {
     }
 
     assert_eq!(tree.walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+}
+
+impl<T: Ord> BinaryTree<T> {
+    // Return a reference to the value in the tree if it exists
+    fn search(&self, value: &T) -> Option<&T> {
+        match *self {
+            BinaryTree::Empty => None,
+            BinaryTree::NonEmpty(ref node) => {
+                if *value == node.element {
+                    Some(&node.element)
+                } else if *value < node.element {
+                    node.left.search(value)
+                } else {
+                    node.right.search(value)
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn test_search_method() {
+    let mut tree = BinaryTree::Empty;
+    tree.add("Pluto");
+    tree.add("Neptune");
+    tree.add("Saturn");
+
+    assert_eq!(tree.search(&"Neptune"), Some(&"Neptune"));
+    assert_eq!(tree.search(&"Mercury"), None);
 }
