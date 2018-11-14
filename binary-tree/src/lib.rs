@@ -45,17 +45,47 @@ fn test_hand_building_tree_of_planets() {
         right: uranus_tree
     }));
 
-    assert_eq!(tree.walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+    // Test traversal methods
+    assert_eq!(tree.inorder_walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+    assert_eq!(tree.preorder_walk(), vec!["Saturn", "Mars", "Jupiter", "Mercury", "Uranus", "Venus"]);
+    assert_eq!(tree.postorder_walk(), vec!["Jupiter", "Mercury", "Mars", "Venus", "Uranus", "Saturn"]);
 }
 
 impl<T: Clone> BinaryTree<T> {
-    fn walk(&self) -> Vec<T> {
+    pub fn inorder_walk(&self) -> Vec<T> {
         match *self {
             BinaryTree::Empty => vec![],
             BinaryTree::NonEmpty(ref boxed) => {
-                let mut result = boxed.left.walk();
+                let mut result = boxed.left.inorder_walk();
                 result.push(boxed.element.clone());
-                result.extend(boxed.right.walk());
+                result.extend(boxed.right.inorder_walk());
+
+                result
+            }
+        }
+    }
+
+    pub fn postorder_walk(&self) -> Vec<T> {
+        match *self {
+            BinaryTree::Empty => vec![],
+            BinaryTree::NonEmpty(ref boxed) => {
+                let mut result = boxed.left.postorder_walk();
+                result.extend(boxed.right.postorder_walk());
+                result.push(boxed.element.clone());
+
+                result
+            }
+        }
+    }
+
+    pub fn preorder_walk(&self) -> Vec<T> {
+        match *self {
+            BinaryTree::Empty => vec![],
+            BinaryTree::NonEmpty(ref boxed) => {
+                let mut result = vec![];
+                result.push(boxed.element.clone());
+                result.extend(boxed.left.preorder_walk());
+                result.extend(boxed.right.preorder_walk());
 
                 result
             }
@@ -64,7 +94,7 @@ impl<T: Clone> BinaryTree<T> {
 }
 
 impl<T: Ord> BinaryTree<T> {
-    fn add(&mut self, value: T) {
+    pub fn insert(&mut self, value: T) {
         match *self {
             BinaryTree::Empty => {
                 *self = BinaryTree::NonEmpty(Box::new(TreeNode {
@@ -75,41 +105,16 @@ impl<T: Ord> BinaryTree<T> {
             },
             BinaryTree::NonEmpty(ref mut node) => {
                 if value <= node.element {
-                    node.left.add(value);
+                    node.left.insert(value);
                 } else {
-                    node.right.add(value);
+                    node.right.insert(value);
                 }
             }
         }
     }
-}
 
-#[test]
-fn test_add_method_1() {
-    let planets = vec!["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus"];
-    let mut tree = BinaryTree::Empty;
-    for planet in planets {
-        tree.add(planet);
-    }
-
-    assert_eq!(tree.walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
-}
-
-#[test]
-fn test_add_method_2() {
-    let mut tree = BinaryTree::Empty;
-    tree.add("Mercury");
-    tree.add("Venus");
-    for planet in vec!["Mars", "Jupiter", "Saturn", "Uranus"]  {
-        tree.add(planet);
-    }
-
-    assert_eq!(tree.walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
-}
-
-impl<T: Ord> BinaryTree<T> {
     // Return a reference to the value in the tree if it exists
-    fn search(&self, value: &T) -> Option<&T> {
+    pub fn search(&self, value: &T) -> Option<&T> {
         match *self {
             BinaryTree::Empty => None,
             BinaryTree::NonEmpty(ref node) => {
@@ -126,11 +131,34 @@ impl<T: Ord> BinaryTree<T> {
 }
 
 #[test]
+fn test_insert_method_1() {
+    let planets = vec!["Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus"];
+    let mut tree = BinaryTree::Empty;
+    for planet in planets {
+        tree.insert(planet);
+    }
+
+    assert_eq!(tree.inorder_walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+}
+
+#[test]
+fn test_insert_method_2() {
+    let mut tree = BinaryTree::Empty;
+    tree.insert("Mercury");
+    tree.insert("Venus");
+    for planet in vec!["Mars", "Jupiter", "Saturn", "Uranus"]  {
+        tree.insert(planet);
+    }
+
+    assert_eq!(tree.inorder_walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
+}
+
+#[test]
 fn test_search_method() {
     let mut tree = BinaryTree::Empty;
-    tree.add("Pluto");
-    tree.add("Neptune");
-    tree.add("Saturn");
+    tree.insert("Pluto");
+    tree.insert("Neptune");
+    tree.insert("Saturn");
 
     assert_eq!(tree.search(&"Neptune"), Some(&"Neptune"));
     assert_eq!(tree.search(&"Mercury"), None);
