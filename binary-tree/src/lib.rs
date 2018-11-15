@@ -51,6 +51,12 @@ fn test_hand_building_tree_of_planets() {
     assert_eq!(tree.postorder_walk(), vec!["Jupiter", "Mercury", "Mars", "Venus", "Uranus", "Saturn"]);
 }
 
+impl<T> BinaryTree<T> {
+    pub fn new(left: Self, element: T, right: Self) -> Self {
+        NonEmpty(Box::new(TreeNode { left, element, right }))
+    }
+}
+
 impl<T: Clone> BinaryTree<T> {
     pub fn inorder_walk(&self) -> Vec<T> {
         match *self {
@@ -94,36 +100,36 @@ impl<T: Clone> BinaryTree<T> {
 }
 
 impl<T: Ord> BinaryTree<T> {
-    pub fn insert(&mut self, value: T) {
+    pub fn insert(&mut self, element: T) {
         match *self {
             BinaryTree::Empty => {
                 *self = BinaryTree::NonEmpty(Box::new(TreeNode {
-                    element: value,
+                    element,
                     left: BinaryTree::Empty,
                     right: BinaryTree::Empty
                 }))
             },
             BinaryTree::NonEmpty(ref mut node) => {
-                if value <= node.element {
-                    node.left.insert(value);
+                if element <= node.element {
+                    node.left.insert(element);
                 } else {
-                    node.right.insert(value);
+                    node.right.insert(element);
                 }
             }
         }
     }
 
     // Return a reference to the value in the tree if it exists
-    pub fn search(&self, value: &T) -> Option<&T> {
+    pub fn search(&self, element: &T) -> Option<&T> {
         match *self {
             BinaryTree::Empty => None,
             BinaryTree::NonEmpty(ref node) => {
-                if *value == node.element {
+                if *element == node.element {
                     Some(&node.element)
-                } else if *value < node.element {
-                    node.left.search(value)
+                } else if *elment < node.element {
+                    node.left.search(element)
                 } else {
-                    node.right.search(value)
+                    node.right.search(element)
                 }
             }
         }
@@ -162,4 +168,98 @@ fn test_search_method() {
 
     assert_eq!(tree.search(&"Neptune"), Some(&"Neptune"));
     assert_eq!(tree.search(&"Mercury"), None);
+}
+
+use self::BinaryTree::*;
+
+struct TreeIter<'a, T: 'a> {
+    unvisited: Vec<&'a TreeNode<T>>
+}
+
+impl<'a, T: 'a> TreeIter<'a, T> {
+    fn push_left_edge(&mut self, mut tree: &'a BinaryTree<T>) {
+        while let NonEmpty(ref node) = *tree {
+            self.unvisited.push(node);
+            tree = &node.left;
+        }
+    }
+}
+
+impl<T> BinaryTree<T> {
+    fn iter(&self) -> TreeIter<T> {
+        let mut iter = TreeIter { unvisited: Vec::new() };
+        iter.push_left_edge(self);
+
+        iter
+    }
+}
+
+impl<'a, T: 'a> IntoIterator for &'a BinaryTree<T> {
+    type Item = &'a T;
+    type IntoIter = TreeIter<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> Iterator for TreeIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<&'a T> {
+        let node = match self.unvisited.pop() {
+            None => return None,
+            Some(n) => n,
+        };
+
+        self.push_left_edge(&node.right);
+
+        Some(&node.element)
+    }
+}
+
+#[test]
+fn external_iterator() {
+    let subtree_l = BinaryTree::new(Empty, "mecha", Empty);
+    let subtree_rl = BinaryTree::new(Empty, "droid", Empty);
+    let subtree_r = BinaryTree::new(subtree_rl, "robot", Empty);
+    let tree = BinaryTree::new(subtree_l, "Jaeger", subtree_r);
+
+    let mut v = Vec::new();
+    for kind in &tree {
+        v.push(*kind);
+    }
+    assert_eq!(v, ["mecha", "Jaeger", "droid", "robot"]);
+
+    let left_subtree = BinaryTree::new(Empty, "mecha", Empty);
+    let right_subtree = BinaryTree::new(BinaryTree::new(Empty, "droid", Empty), "robot", Empty);
+    let tree = BinaryTree::new(left_subtree, "Jaeger", right_subtree);
+
+    let mut v = Vec::new();
+    let mut iter = TreeIter { unvisited: vec![] };
+    iter.push_left_edge(&tree);
+
+    for kind in iter {
+        v.push(*kind);
+    }
+    assert_eq!(v, ["mecha", "Jaeger", "droid", "robot"]);
+
+    let mut v = Vec::new();
+    let mut state = tree.into_iter();
+    while let Some(kind) = state.next() {
+        v.push(*kind);
+    }
+    assert_eq!(v, ["mecha", "Jaeger", "droid", "robot"]);
+
+    assert_eq!(tree.iter()
+                .map(|name| format!("mega-{}", name))
+                .collect::<Vec<_>>(),
+                vec!["mega-mecha", "mega-Jaeger", "mega-droid", "mega-robot"]);
+
+    let mut iterator = tree.into_iter();
+    assert_eq!(iterator.next(), Some(&"mecha"));
+    assert_eq!(iterator.next(), Some(&"Jaeger"));
+    assert_eq!(iterator.next(), Some(&"droid"));
+    assert_eq!(iterator.next(), Some(&"robot"));
+    assert_eq!(iterator.next(), None);
 }
