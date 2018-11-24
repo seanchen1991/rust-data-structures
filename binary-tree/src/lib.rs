@@ -49,11 +49,30 @@ fn test_hand_building_tree_of_planets() {
     assert_eq!(tree.inorder_walk(), vec!["Jupiter", "Mars", "Mercury", "Saturn", "Uranus", "Venus"]);
     assert_eq!(tree.preorder_walk(), vec!["Saturn", "Mars", "Jupiter", "Mercury", "Uranus", "Venus"]);
     assert_eq!(tree.postorder_walk(), vec!["Jupiter", "Mercury", "Mars", "Venus", "Uranus", "Saturn"]);
+
+    // Test iterator order 
+    assert_eq!(tree.inorder_iter().collect::<Vec<_>>(), vec![&"Jupiter", &"Mars", &"Mercury", &"Saturn", &"Uranus", &"Venus"]);
+    // assert_eq!(tree.preorder_iter().collect::<Vec<_>>(), vec![&"Saturn", &"Mars", &"Jupiter", &"Mercury", &"Uranus", &"Venus"]);
+    // assert_eq!(tree.postorder_iter().collect::<Vec<_>>(), vec![&"Jupiter", &"Mercury", &"Mars", &"Venus", &"Uranus", &"Saturn"]);
 }
 
 impl<T> BinaryTree<T> {
     pub fn new(left: Self, element: T, right: Self) -> Self {
         NonEmpty(Box::new(TreeNode { left, element, right }))
+    }
+
+    fn inorder_iter(&self) -> TreeIter<T> {
+        let mut iter = TreeIter { unvisited: Vec::new() };
+        iter.push_left_edge(self);
+
+        iter
+    }
+
+    fn preorder_iter(&self) -> TreeIter<T> {
+        let mut iter = TreeIter { unvisited: Vec::new() };
+        iter.unvisited.push(*self);
+
+        iter
     }
 }
 
@@ -126,7 +145,7 @@ impl<T: Ord> BinaryTree<T> {
             BinaryTree::NonEmpty(ref node) => {
                 if *element == node.element {
                     Some(&node.element)
-                } else if *elment < node.element {
+                } else if *element < node.element {
                     node.left.search(element)
                 } else {
                     node.right.search(element)
@@ -185,21 +204,12 @@ impl<'a, T: 'a> TreeIter<'a, T> {
     }
 }
 
-impl<T> BinaryTree<T> {
-    fn iter(&self) -> TreeIter<T> {
-        let mut iter = TreeIter { unvisited: Vec::new() };
-        iter.push_left_edge(self);
-
-        iter
-    }
-}
-
 impl<'a, T: 'a> IntoIterator for &'a BinaryTree<T> {
     type Item = &'a T;
     type IntoIter = TreeIter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+        self.inorder_iter()
     }
 }
 
