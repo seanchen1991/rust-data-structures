@@ -20,6 +20,8 @@ struct List<T> {
     tail: usize,
 }
 
+struct IntoIter<T>(List<T>);
+
 impl<T> List<T> {
     fn new() -> Self {
         List {
@@ -57,17 +59,56 @@ impl<T> List<T> {
         node
     }
 
-    fn pop_front(&mut self) -> T {
-        let node = self.nodes.remove(self.head);
+    fn push_front(&mut self, value: T) -> usize {
+        let node = self.nodes.insert(Node {
+            value,
+            prev: NULL,
+            next: NULL,
+        });
 
-        self.link(NULL, node.next);
-        self.head = node.next;
+        let head = self.head;
+        self.link(node, head);
 
-        if node.next == NULL {
-            self.tail = NULL;
+        self.head = node;
+        if self.tail == NULL {
+            self.tail = node;
         }
 
-        node.value
+        node
+    }
+
+    fn pop_back(&mut self) -> Option<T> {
+        if self.len() == 0 {
+            None
+        } else {
+            let node = self.nodes.remove(self.tail);
+
+            self.link(node.prev, NULL);
+            self.tail = node.prev;
+
+            if node.prev == NULL {
+                self.head = NULL;
+            }
+
+            Some(node.value)
+        }
+    }
+
+    fn pop_front(&mut self) -> Option<T> {
+        if self.len() == 0 {
+            None
+        } else {
+            let node = self.nodes.remove(self.head);
+
+            self.link(NULL, node.next);
+            self.head = node.next;
+
+            if node.next == NULL {
+                self.tail = NULL;
+            }
+
+            Some(node.value)
+        }
     }
 
     fn remove(&mut self, index: usize) -> T {
@@ -79,30 +120,117 @@ impl<T> List<T> {
 
         node.value
     }
+
+    fn peek_front(&self) -> Option<&T> {
+       if self.len() == 0 {
+           None
+       } else {
+           let node = self.nodes.get(self.head).unwrap();
+           Some(&node.value)
+       }
+    }
+
+    fn peek_back(&self) -> Option<&T> {
+        if self.len() == 0 {
+            None
+        } else {
+            let node = self.nodes.get(self.tail).unwrap();
+            Some(&node.value)
+        }
+    }
+
+    fn into_iter(self) -> IntoIter<T> {
+        IntoIter(self)
+    }
+}
+
+impl<T> Drop for List<T> {
+    fn drop(&mut self) {
+        while self.pop_front().is_some() {}
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        self.0.pop_front()
+    }
+}
+
+impl<T> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<T> {
+        self.0.pop_back()
+    }
 }
 
 #[test]
-fn test() {
+fn basics() {
     let mut list = List::new();
 
-    let one = list.push_back(1);
+    assert_eq!(list.pop_front(), None);
+
+    list.push_front(1);
+    list.push_front(2);
+    list.push_front(3);
+
+    assert_eq!(list.pop_front(), Some(3));
+    assert_eq!(list.pop_front(), Some(2));
+
+    list.push_front(4);
+    list.push_front(5);
+
+    assert_eq!(list.pop_front(), Some(5));
+    assert_eq!(list.pop_front(), Some(4));
+
+    assert_eq!(list.pop_front(), Some(1));
+    assert_eq!(list.pop_front(), None);
+
+    assert_eq!(list.pop_back(), None);
+
+    list.push_back(1);
     list.push_back(2);
     list.push_back(3);
 
-    list.push_back(10);
-    let twenty = list.push_back(20);
-    list.push_back(30);
+    assert_eq!(list.pop_back(), Some(3));
+    assert_eq!(list.pop_back(), Some(2));
 
-    assert_eq!(list.len(), 6);
-    assert_eq!(list.remove(one), 1);
-    assert_eq!(list.remove(twenty), 20);
+    list.push_back(4);
+    list.push_back(5);
 
-    assert_eq!(list.len(), 4);
+    assert_eq!(list.pop_back(), Some(5));
+    assert_eq!(list.pop_back(), Some(4));
 
-    assert_eq!(list.pop_front(), 2);
-    assert_eq!(list.pop_front(), 3);
-    assert_eq!(list.pop_front(), 10);
-    assert_eq!(list.pop_front(), 30);
+    assert_eq!(list.pop_back(), Some(1));
+    assert_eq!(list.pop_back(), None);
+}
 
-    assert_eq!(list.len(), 0);
+#[test]
+fn test_peek() {
+    let mut list = List::new();
+    assert_eq!(list.peek_front(), None);
+    assert_eq!(list.peek_back(), None);
+
+    list.push_front(1);
+    list.push_front(2);
+    list.push_front(3);
+
+    assert_eq!(&*list.peek_front().unwrap(), &3);
+    assert_eq!(&*list.peek_back().unwrap(), &1); 
+}
+
+#[test]
+fn test_into_iter() {
+    let mut list = List::new();
+
+    list.push_front(1); 
+    list.push_front(2); 
+    list.push_front(3);
+
+    let mut iter = list.into_iter();
+    assert_eq!(iter.next(), Some(3));
+    assert_eq!(iter.next_back(), Some(1));
+    assert_eq!(iter.next(), Some(2));
+    assert_eq!(iter.next_back(), None);
+    assert_eq!(iter.next(), None);
 }
