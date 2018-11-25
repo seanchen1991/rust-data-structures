@@ -82,7 +82,7 @@ impl<T: Ord> PriorityQueue<T> {
         let mut child = 2 * pos + 1;
         while child <= end {
             let right = child + 1;
-            if right < end && (self.comparator)(&self.storage[child], &self.storage[right]) != Ordering::Greater {
+            if right <= end && (self.comparator)(&self.storage[child], &self.storage[right]) != Ordering::Greater {
                 child = right;
             }
             if (self.comparator)(&self.storage[pos], &self.storage[child]) == Ordering::Less {
@@ -173,6 +173,28 @@ fn test_default_delete_correctness() {
 }
 
 #[test]
+fn test_custom_delete_correctness() {
+    let mut pq = PriorityQueue::new_with(|a: &i64, b: &i64| b.cmp(a));
+    let values = vec![1, 2, 3, 4, 5];
+    let mut expected = values.clone();
+    expected.sort();
+
+    for el in values {
+        pq.insert(el);
+    }
+
+    assert_eq!(pq.len(), expected.len());
+
+    for el in expected {
+        assert_eq!(el, pq.delete().unwrap());
+        println!("{:?}", pq.storage);
+    }
+
+    assert_eq!(pq.len(), 0);
+    assert_eq!(pq.delete(), None);
+}
+
+#[test]
 fn test_default_get_priority() {
     let mut pq = PriorityQueue::default();
 
@@ -189,8 +211,24 @@ fn test_default_get_priority() {
 }
 
 #[test]
-fn test_iterators() {
-    let mut pq = PriorityQueue::new();
+fn test_custom_get_priority() {
+    let mut pq = PriorityQueue::new_with(|a: &i64, b: &i64| b.cmp(a));
+
+    assert_eq!(pq.get_priority(), None);
+
+    pq.insert(2);
+    assert_eq!(pq.get_priority(), Some(&2));
+
+    pq.insert(5);
+    assert_eq!(pq.get_priority(), Some(&2));
+
+    pq.insert(1);
+    assert_eq!(pq.get_priority(), Some(&1));
+}
+
+#[test]
+fn test_default_iterator_correctness() {
+    let mut pq = PriorityQueue::default();
     let values = vec![6, 8, 10, 9, 1, 9, 9, 5];
     let mut expected = values.clone();
     expected.sort_by(|a, b| b.cmp(a));
@@ -198,6 +236,20 @@ fn test_iterators() {
     for el in values {
         pq.insert(el);
     } 
+
+    assert_eq!(pq.iter().collect::<Vec<_>>(), expected);
+}
+
+#[test]
+fn test_custom_iterator_correctness() {
+    let mut pq = PriorityQueue::new_with(|a: &i64, b: &i64| b.cmp(a));
+    let values = vec![6, 8, 10, 9, 1, 9, 9, 5];
+    let mut expected = values.clone();
+    expected.sort();
+
+    for el in values {
+        pq.insert(el);
+    }
 
     assert_eq!(pq.iter().collect::<Vec<_>>(), expected);
 }
