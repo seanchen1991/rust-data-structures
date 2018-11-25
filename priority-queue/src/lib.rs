@@ -51,11 +51,12 @@ impl<T: Ord> PriorityQueue<T> {
     }
 
     /// Removes and returns the owned priority value
-    pub fn delete(&mut self) -> Option<T>{
-        // Remove the priority element storage
-        // Replaces it with last element in storage
+    pub fn delete(&mut self) -> Option<T> {
         if self.len() > 1 {
+            // Remove the priority value from storage
+            // Replaces it with last element in storage
             let rv = self.storage.swap_remove(0);
+            // Sift the element at index 0 down to an appropriate spot
             self.sift_down(0);
             Some(rv)     
         } else if self.len() == 1 {
@@ -65,6 +66,8 @@ impl<T: Ord> PriorityQueue<T> {
         }
     }
 
+    /// Swaps an element up the priority queue with its parent until
+    /// it reaches an appropriate spot in the queue
     fn bubble_up(&mut self, start: usize, mut pos: usize) {
         while pos > start {
             let parent = (pos - 1) / 2;
@@ -77,6 +80,8 @@ impl<T: Ord> PriorityQueue<T> {
         }
     }
 
+    /// Swaps an element down the priority queue with its higher-priority
+    /// child until it reaches an appropriate spot in the queue
     fn sift_down(&mut self, mut pos: usize) {
         let end = self.len() - 1;
         let mut child = 2 * pos + 1;
@@ -95,6 +100,8 @@ impl<T: Ord> PriorityQueue<T> {
         }
     }
 
+    /// Initialize a QueueIter instance to keep track of
+    /// the state of elements in our iterator
     fn iter(self) -> QueueIter<T> {
         let mut iter = QueueIter { values: Vec::new() };
         iter.populate_iter(self);
@@ -103,12 +110,15 @@ impl<T: Ord> PriorityQueue<T> {
 }
 
 impl<T: Ord> Default for PriorityQueue<T> {
+    /// Default PriorityQueue is a max heap
     fn default() -> PriorityQueue<T> {
         PriorityQueue::new()
     }
 }
 
 impl<T: Ord> QueueIter<T> {
+    /// Populate QueueIter by repeatedly calling `delete`
+    /// until the queue is empty
     fn populate_iter(&mut self, mut pq: PriorityQueue<T>) {
         while pq.len() > 0 {
             self.values.push(pq.delete().unwrap());
