@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 
+use std::cmp::Ordering;
+
 struct PriorityQueue<T> {
-    storage: Vec<T>
+    storage: Vec<T>,
+    comparator: Box<Fn(&T, &T) -> Ordering>,
 }
 
 struct QueueIter<T> {
@@ -10,7 +13,19 @@ struct QueueIter<T> {
 
 impl<T: Ord> PriorityQueue<T> {
     pub fn new() -> Self {
-        PriorityQueue { storage: Vec::new() }
+        PriorityQueue { 
+            storage: Vec::new(),
+            comparator: Box::new(|a: &T, b: &T| a.cmp(b)),
+        }
+    }
+
+    pub fn new_with<C>(comparator: C) -> Self
+        where C: Fn(&T, &T) -> Ordering + 'static
+    {
+        PriorityQueue {
+            storage: Vec::new(),
+            comparator: Box::new(comparator),
+        }
     }
 
     /// Returns a reference to the priority value
@@ -76,6 +91,12 @@ impl<T: Ord> PriorityQueue<T> {
         let mut iter = QueueIter { values: Vec::new() };
         iter.populate_iter(self);
         iter
+    }
+}
+
+impl<T: Ord> Default for PriorityQueue<T> {
+    fn default() -> PriorityQueue<T> {
+        PriorityQueue::new()
     }
 }
 
