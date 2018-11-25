@@ -1,0 +1,8 @@
+[package]
+name = "doubly-linked-list"
+version = "0.1.0"
+authors = ["Sean <seanchen11235@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+slab = "0.4"
