@@ -1,1 +1,0 @@
-{"rustc":3392639199922766819,"features":"[]","target":10714858461964950375,"profile":9792829468235470965,"path":10872709659218687626,"deps":[["slab v0.4.1","slab",5562704589213591392]],"local":[{"MtimeBased":[[1543146846,905958508],".fingerprint/doubly-linked-list-9fe76ac3a17bb3de/dep-test-lib-doubly_linked_list-9fe76ac3a17bb3de"]}],"rustflags":[],"edition":"Edition2018"}
