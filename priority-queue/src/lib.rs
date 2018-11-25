@@ -33,10 +33,12 @@ impl<T: Ord> PriorityQueue<T> {
     pub fn delete(&mut self) -> Option<T>{
         // Remove the priority element storage
         // Replaces it with last element in storage
-        if self.storage.len() > 0 {
+        if self.len() > 1 {
             let rv = self.storage.swap_remove(0);
             self.sift_down(0);
             Some(rv)     
+        } else if self.len() == 1 {
+            self.storage.pop()
         } else {
             None
         }
@@ -53,26 +55,10 @@ impl<T: Ord> PriorityQueue<T> {
         }
     }
 
-    // fn sift_down(&mut self, mut pos: usize) {
-    //     let end = self.len() - 1;
-    //     let mut child = 2 * pos + 1;
-    //     while child < end {
-    //         let right = child + 1;
-    //         if right < end && !(self.storage[child] > self.storage[right]) {
-    //             child = right;
-    //         }
-    //         if self.storage[pos] >= self.storage[child] {
-    //             break;
-    //         }
-    //         pos = child;
-    //         child = 2 * pos + 1;
-    //     }
-    // } 
-
     fn sift_down(&mut self, mut pos: usize) {
         let end = self.len() - 1;
         let mut child = 2 * pos + 1;
-        while child < end {
+        while child <= end {
             let right = child + 1;
             if right < end && !(self.storage[child] > self.storage[right]) {
                 child = right;
@@ -80,6 +66,7 @@ impl<T: Ord> PriorityQueue<T> {
             if self.storage[pos] >= self.storage[child] {
                 break;
             }
+            self.storage.swap(pos, child);
             pos = child;
             child = 2 * pos + 1;
         }
@@ -136,41 +123,36 @@ fn test_insert_length() {
 }
 
 #[test]
-fn test_delete_length() {
+fn test_delete_correctness() {
     let mut pq: PriorityQueue<i64> = PriorityQueue::new();
+    let values = vec![1, 2, 3, 4, 5];
+    let mut expected = values.clone();
+    expected.sort_by(|a, b| b.cmp(a));
 
-    pq.insert(1);
-    pq.insert(2);
-    pq.insert(3);
-    pq.insert(4);
-    pq.insert(5); 
+    for el in values {
+        pq.insert(el);
+    }
 
-    assert_eq!(pq.delete(), Some(5));
-    assert_eq!(pq.len(), 4);
+    assert_eq!(pq.len(), expected.len());
 
-    assert_eq!(pq.delete(), Some(4));
-    assert_eq!(pq.delete(), Some(3));
-    assert_eq!(pq.delete(), Some(2));
-    assert_eq!(pq.len(), 1);
+    for el in expected {
+        assert_eq!(el, pq.delete().unwrap());
+    }
 
-    assert_eq!(pq.delete(), Some(1));
-    // assert_eq!(pq.len(), 0);
-
-    // assert_eq!(pq.delete(), None);
+    assert_eq!(pq.len(), 0);
+    assert_eq!(pq.delete(), None);
 }
 
-// fn test_insert() {
-//     let mut pq = PriorityQueue::new();
-//     pq.insert(6);
-//     pq.insert(8);
-//     pq.insert(10);
-//     pq.insert(9);
-//     pq.insert(1);
-//     pq.insert(9);
-//     pq.insert(9);
-//     pq.insert(5);
+#[test]
+fn test_iterators() {
+    let mut pq = PriorityQueue::new();
+    let values = vec![6, 8, 10, 9, 1, 9, 9, 5];
+    let mut expected = values.clone();
+    expected.sort_by(|a, b| b.cmp(a));
 
-//     let expected = vec![10, 9, 9, 9, 8, 6, 5, 1];
+    for el in values {
+        pq.insert(el);
+    } 
 
-//     assert_eq!(pq.iter().collect::<Vec<_>>(), expected);
-// }
+    assert_eq!(pq.iter().collect::<Vec<_>>(), expected);
+}
