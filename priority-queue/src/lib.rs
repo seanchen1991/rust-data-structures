@@ -12,6 +12,7 @@ struct QueueIter<T> {
 }
 
 impl<T: Ord> PriorityQueue<T> {
+    /// New PriorityQueue instance with default comparator
     pub fn new() -> Self {
         PriorityQueue { 
             storage: Vec::new(),
@@ -19,6 +20,7 @@ impl<T: Ord> PriorityQueue<T> {
         }
     }
 
+    /// New PriorityQueue instance with specified comparator
     pub fn new_with<C>(comparator: C) -> Self
         where C: Fn(&T, &T) -> Ordering + 'static
     {
@@ -29,8 +31,12 @@ impl<T: Ord> PriorityQueue<T> {
     }
 
     /// Returns a reference to the priority value
-    pub fn get_max(&self) -> &T {
-        &self.storage[0]
+    pub fn get_priority(&self) -> Option<&T> {
+        if self.len() > 0 {
+            Some(&self.storage[0])
+        } else {
+            None
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -62,11 +68,12 @@ impl<T: Ord> PriorityQueue<T> {
     fn bubble_up(&mut self, start: usize, mut pos: usize) {
         while pos > start {
             let parent = (pos - 1) / 2;
-            if self.storage[pos] <= self.storage[parent] {
+            if (self.comparator)(&self.storage[pos], &self.storage[parent]) == Ordering::Greater {
+                self.storage.swap(pos, parent);
+                pos = parent;
+            } else {
                 break;
             }
-            self.storage.swap(pos, parent);
-            pos = parent;
         }
     }
 
@@ -75,15 +82,16 @@ impl<T: Ord> PriorityQueue<T> {
         let mut child = 2 * pos + 1;
         while child <= end {
             let right = child + 1;
-            if right < end && !(self.storage[child] > self.storage[right]) {
+            if right < end && (self.comparator)(&self.storage[child], &self.storage[right]) != Ordering::Greater {
                 child = right;
             }
-            if self.storage[pos] >= self.storage[child] {
+            if (self.comparator)(&self.storage[pos], &self.storage[child]) == Ordering::Less {
+                self.storage.swap(pos, child);
+                pos = child;
+                child = 2 * pos + 1;
+            } else {
                 break;
             }
-            self.storage.swap(pos, child);
-            pos = child;
-            child = 2 * pos + 1;
         }
     }
 
@@ -132,7 +140,7 @@ impl<T: Ord> IntoIterator for PriorityQueue<T> {
 
 #[test]
 fn test_insert_length() {
-    let mut pq: PriorityQueue<i64> = PriorityQueue::new();
+    let mut pq = PriorityQueue::default();
     assert_eq!(pq.len(), 0);
 
     pq.insert(1);
@@ -144,8 +152,8 @@ fn test_insert_length() {
 }
 
 #[test]
-fn test_delete_correctness() {
-    let mut pq: PriorityQueue<i64> = PriorityQueue::new();
+fn test_default_delete_correctness() {
+    let mut pq = PriorityQueue::default();
     let values = vec![1, 2, 3, 4, 5];
     let mut expected = values.clone();
     expected.sort_by(|a, b| b.cmp(a));
@@ -162,6 +170,22 @@ fn test_delete_correctness() {
 
     assert_eq!(pq.len(), 0);
     assert_eq!(pq.delete(), None);
+}
+
+#[test]
+fn test_default_get_priority() {
+    let mut pq = PriorityQueue::default();
+
+    assert_eq!(pq.get_priority(), None);
+
+    pq.insert(2);
+    assert_eq!(pq.get_priority(), Some(&2));
+
+    pq.insert(1);
+    assert_eq!(pq.get_priority(), Some(&2));
+
+    pq.insert(5);
+    assert_eq!(pq.get_priority(), Some(&5));
 }
 
 #[test]
