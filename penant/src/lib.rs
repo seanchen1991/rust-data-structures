@@ -27,14 +27,14 @@ impl<T> Penant<T> {
         self.count.next_power_of_two()
     }
 
-    pub fn combine(&mut self, p: &mut Penant) {
+    pub fn combine(&mut self, p: Penant) {
         match *self.middle {
             None => {
                 *self.middle = p;
                 self.count += 1;
                 self.k = 1;
             },
-            Some(ref mut penant) => {
+            Some(penant) => {
                 *p.left = penant;
                 p.right = p.middle.take();
                 *p.middle = None;
@@ -46,11 +46,11 @@ impl<T> Penant<T> {
     }
 }
 
-impl<T: Clone> Penant<T> {
-    pub fn walk(&self) -> Vec<BinaryTree> {
+// impl<T: Clone> Penant<T> {
+//     pub fn walk(&self) -> Vec<BinaryTree> {
         
-    }
-}
+//     }
+// }
 
 #[test]
 fn test_combining_two_one_element_penants() {
