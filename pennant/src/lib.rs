@@ -1,66 +1,100 @@
+#![feature(box_into_raw_non_null)]
 #[allow(dead_code)]
 
-type BinaryTree<T> = Option<Box<Penant<T>>>;
+use std::ptr::NonNull;
 
-struct Penant<T> {
-    k: usize,
+struct Pennant<T> {
+    k: i32,
     element: T,
     count: usize,
-    left: BinaryTree<T>,
-    middle: BinaryTree<T>,
-    right: BinaryTree<T>
+    left: Option<NonNull<Pennant<T>>>,
+    middle: Option<NonNull<Pennant<T>>>,
+    right: Option<NonNull<Pennant<T>>>,
 }
 
-impl<T> Penant<T> {
+impl<T> Pennant<T> {
     pub fn new(element: T) -> Self {
-        Penant { 
+        Pennant { 
             element,
             k: 0,
             count: 1,
             left: None,
             right: None,
-            middle: None
+            middle: None, 
         }
     }
 
-    pub fn determine_k(&self) -> usize {
-        self.count.next_power_of_two()
+    fn into_element(self) -> T {
+        self.element
     }
 
-    pub fn combine(&mut self, p: Penant) {
-        match *self.middle {
+    /// Combines two Pennants into a new Pennant whose total
+    /// number of nodes is 2^(k+1) where k is the value of the 
+    /// prior pennant. Note that the Bag will maintain the 
+    /// invariant that only Pennants of equal k will be combined.
+    pub fn combine(&mut self, mut pennant: Box<Pennant<T>>) {
+        assert!(self.k == pennant.k);
+
+        match self.middle {
             None => {
-                *self.middle = p;
+                self.middle = Some(Box::into_raw_non_null(pennant));
                 self.count += 1;
                 self.k = 1;
             },
-            Some(penant) => {
-                *p.left = penant;
-                p.right = p.middle.take();
-                *p.middle = None;
-                *self.middle = p;
-                self.count += p.count;
-                self.k = self.determine_k();
+            Some(middle) => {
+                pennant.left = Some(middle);
+                pennant.right = pennant.middle;
+                pennant.middle = None;
+                self.count += pennant.count;
+                self.k = f32::log2(self.count as f32) as i32;
+                self.middle = Some(Box::into_raw_non_null(pennant));
+            }
+        }
+    }
+
+    /// Performs the inverse of the `combine` method. Splits
+    /// a Pennant into two Pennants of equal size, updating
+    /// each new Pennant's k value accordingly.
+    /// Returns the split-off Pennant.
+    pub fn split(&mut self) -> Option<Box<Pennant<T>>> {
+        match self.middle {
+            None => None,
+            Some(middle) => {
+                let mut new_pennant;
+                
+                unsafe {
+                    new_pennant = Box::from_raw(middle.as_ptr());
+                }
+
+                self.middle = new_pennant.left;
+                new_pennant.middle = new_pennant.right;
+                new_pennant.left = None;
+                new_pennant.right = None;
+
+                self.count /= 2;
+                self.k = f32::log2(self.count as f32) as i32;
+
+                new_pennant.count = self.count;
+                new_pennant.k = self.k;
+
+                Some(new_pennant)
             }
         }
     }
 }
 
-// impl<T: Clone> Penant<T> {
-//     pub fn walk(&self) -> Vec<BinaryTree> {
-        
-//     }
-// }
-
 #[test]
 fn test_combining_two_one_element_penants() {
-    let mut x = Penant::new("Mercury");
-    let mut y = Penant::new("Venus");
-    x.combine(&mut y);
+    let mut x = Pennant::new("Mercury");
+    let y = Pennant::new("Venus");
 
-    assert_eq!(x.middle, y);
+    x.combine(Box::new(y));
+
     assert_eq!(x.count, 2);
     assert_eq!(x.k, 1);
-    assert_eq!(x.left, None);
-    assert_eq!(x.right, None);
+    assert!(x.left.is_none());
+    assert!(x.right.is_none());
+
+    // Come up with a better way to test the middle value
+    assert!(x.middle.is_some());
 }
