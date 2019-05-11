@@ -1,8 +1,11 @@
 #![feature(box_into_raw_non_null)]
-#[allow(dead_code)]
 
 use std::ptr::NonNull;
 
+/// A Pennant is comprised of a unary root whose child
+/// is a complete binary tree. Each Pennant nodes stores
+/// a value. Bags store multiple Pennants in order to 
+/// store any arbitrary number of elements in the Bag.
 struct Pennant<T> {
     k: i32,
     element: T,
@@ -24,7 +27,7 @@ impl<T> Pennant<T> {
         }
     }
 
-    fn into_element(self) -> T {
+    fn into_element(self: Box<Self>) -> T {
         self.element
     }
 
@@ -84,9 +87,11 @@ impl<T> Pennant<T> {
 }
 
 #[test]
-fn test_combining_two_one_element_penants() {
+fn test_combining_two_one_element_pennants() {
     let mut x = Pennant::new("Mercury");
     let y = Pennant::new("Venus");
+
+    assert!(x.middle.is_none());
 
     x.combine(Box::new(y));
 
@@ -95,6 +100,34 @@ fn test_combining_two_one_element_penants() {
     assert!(x.left.is_none());
     assert!(x.right.is_none());
 
-    // Come up with a better way to test the middle value
     assert!(x.middle.is_some());
+
+    let middle;
+    unsafe {
+        middle = Box::from_raw(x.middle.unwrap().as_ptr());
+    }
+    
+    assert_eq!(middle.into_element(), "Venus")
+}
+
+#[test]
+fn test_splitting_one_two_element_pennant() {
+    let mut x = Pennant::new("Mercury");
+    let y = Pennant::new("Venus");
+
+    x.combine(Box::new(y));
+
+    let split = x.split();
+    assert!(split.is_some());
+
+    assert_eq!(x.count, 1);
+    assert_eq!(x.k, 0);
+    assert!(x.middle.is_none());
+
+    let split_pennant = split.unwrap();
+
+    assert_eq!(split_pennant.count, 1);
+    assert_eq!(split_pennant.k, 0);
+    assert!(split_pennant.middle.is_none());
+    assert_eq!(split_pennant.into_element(), "Venus");
 }
