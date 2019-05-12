@@ -1,4 +1,5 @@
 #![feature(box_into_raw_non_null)]
+#![allow(dead_code)]
 
 use std::ptr::NonNull;
 
@@ -27,8 +28,8 @@ impl<T> Pennant<T> {
         }
     }
 
-    fn into_element(self: Box<Self>) -> T {
-        self.element
+    fn into_element(&self) -> &T {
+        &self.element
     }
 
     /// Combines two Pennants into a new Pennant whose total
@@ -91,23 +92,59 @@ fn test_combining_two_one_element_pennants() {
     let mut x = Pennant::new("Mercury");
     let y = Pennant::new("Venus");
 
-    assert!(x.middle.is_none());
-
     x.combine(Box::new(y));
 
     assert_eq!(x.count, 2);
     assert_eq!(x.k, 1);
     assert!(x.left.is_none());
     assert!(x.right.is_none());
-
     assert!(x.middle.is_some());
 
     let middle;
     unsafe {
         middle = Box::from_raw(x.middle.unwrap().as_ptr());
     }
-    
-    assert_eq!(middle.into_element(), "Venus")
+
+    assert_eq!(middle.into_element(), &"Venus");
+}
+
+#[test]
+fn test_combining_two_two_element_pennants() {
+    let mut x = Pennant::new("Mercury");
+    let y = Pennant::new("Venus");
+    x.combine(Box::new(y));
+
+    let mut a = Pennant::new("Earth");
+    let b = Pennant::new("Mars");
+    a.combine(Box::new(b));
+
+    x.combine(Box::new(a));
+
+    assert_eq!(x.count, 4);
+    assert_eq!(x.k, 2);
+    assert!(x.left.is_none());
+    assert!(x.right.is_none());
+    assert!(x.middle.is_some());
+
+    let middle;
+    unsafe {
+        middle = Box::from_raw(x.middle.unwrap().as_ptr());
+    }
+
+    assert!(middle.left.is_some());
+    assert!(middle.right.is_some());
+    assert!(middle.middle.is_none());
+    assert_eq!(middle.into_element(), &"Earth");
+
+    let left;
+    let right;
+    unsafe {
+        left = Box::from_raw(middle.left.unwrap().as_ptr());
+        right = Box::from_raw(middle.right.unwrap().as_ptr());
+    }
+
+    assert_eq!(left.into_element(), &"Venus");
+    assert_eq!(right.into_element(), &"Mars");
 }
 
 #[test]
@@ -129,5 +166,5 @@ fn test_splitting_one_two_element_pennant() {
     assert_eq!(split_pennant.count, 1);
     assert_eq!(split_pennant.k, 0);
     assert!(split_pennant.middle.is_none());
-    assert_eq!(split_pennant.into_element(), "Venus");
+    assert_eq!(split_pennant.into_element(), &"Venus");
 }
