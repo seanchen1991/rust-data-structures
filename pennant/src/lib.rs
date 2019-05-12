@@ -148,6 +148,63 @@ fn test_combining_two_two_element_pennants() {
 }
 
 #[test]
+fn test_combining_two_four_element_pennants() {
+    let mut x = Pennant::new("Mercury");
+    let y = Pennant::new("Venus");
+    x.combine(Box::new(y));
+
+    let mut a = Pennant::new("Earth");
+    let b = Pennant::new("Mars");
+    a.combine(Box::new(b));
+
+    x.combine(Box::new(a));
+
+    let mut c = Pennant::new("Jupiter");
+    let d = Pennant::new("Saturn");
+    c.combine(Box::new(d));
+
+    let mut e = Pennant::new("Uranus");
+    let f = Pennant::new("Neptune");
+    e.combine(Box::new(f));
+
+    c.combine(Box::new(e));
+
+    x.combine(Box::new(c));
+
+    assert_eq!(x.count, 8);
+    assert_eq!(x.k, 3);
+    assert!(x.left.is_none());
+    assert!(x.right.is_none());
+    assert!(x.middle.is_some());
+
+    let middle;
+    unsafe {
+        middle = Box::from_raw(x.middle.unwrap().as_ptr());
+    }
+
+    assert!(middle.left.is_some());
+    assert!(middle.right.is_some());
+    assert!(middle.middle.is_none());
+    assert_eq!(middle.into_element(), &"Jupiter"); 
+
+    let left;
+    let right;
+    unsafe {
+        left = Box::from_raw(middle.left.unwrap().as_ptr());
+        right = Box::from_raw(middle.right.unwrap().as_ptr());
+    }
+
+    assert!(left.left.is_some());
+    assert!(left.right.is_some());
+    assert!(left.middle.is_none());
+    assert!(right.left.is_some());
+    assert!(right.right.is_some());
+    assert!(right.middle.is_none());
+    assert_eq!(left.into_element(), &"Earth");
+    assert_eq!(right.into_element(), &"Uranus");
+}
+
+#[test]
 fn test_splitting_one_two_element_pennant() {
     let mut x = Pennant::new("Mercury");
     let y = Pennant::new("Venus");
