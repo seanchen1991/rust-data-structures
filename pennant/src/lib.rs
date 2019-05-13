@@ -28,7 +28,7 @@ impl<T> Pennant<T> {
         }
     }
 
-    fn into_element(&self) -> &T {
+    fn fetch_element(&self) -> &T {
         &self.element
     }
 
@@ -96,6 +96,7 @@ fn test_combining_two_one_element_pennants() {
 
     assert_eq!(x.count, 2);
     assert_eq!(x.k, 1);
+    assert_eq!(x.fetch_element(), &"Mercury");
     assert!(x.left.is_none());
     assert!(x.right.is_none());
     assert!(x.middle.is_some());
@@ -105,7 +106,7 @@ fn test_combining_two_one_element_pennants() {
         middle = Box::from_raw(x.middle.unwrap().as_ptr());
     }
 
-    assert_eq!(middle.into_element(), &"Venus");
+    assert_eq!(middle.fetch_element(), &"Venus");
 }
 
 #[test]
@@ -125,6 +126,7 @@ fn test_combining_two_two_element_pennants() {
     assert!(x.left.is_none());
     assert!(x.right.is_none());
     assert!(x.middle.is_some());
+    assert_eq!(x.fetch_element(), &"Mercury");
 
     let middle;
     unsafe {
@@ -134,7 +136,7 @@ fn test_combining_two_two_element_pennants() {
     assert!(middle.left.is_some());
     assert!(middle.right.is_some());
     assert!(middle.middle.is_none());
-    assert_eq!(middle.into_element(), &"Earth");
+    assert_eq!(middle.fetch_element(), &"Earth");
 
     let left;
     let right;
@@ -143,8 +145,8 @@ fn test_combining_two_two_element_pennants() {
         right = Box::from_raw(middle.right.unwrap().as_ptr());
     }
 
-    assert_eq!(left.into_element(), &"Venus");
-    assert_eq!(right.into_element(), &"Mars");
+    assert_eq!(left.fetch_element(), &"Venus");
+    assert_eq!(right.fetch_element(), &"Mars");
 }
 
 #[test]
@@ -185,7 +187,7 @@ fn test_combining_two_four_element_pennants() {
     assert!(middle.left.is_some());
     assert!(middle.right.is_some());
     assert!(middle.middle.is_none());
-    assert_eq!(middle.into_element(), &"Jupiter"); 
+    assert_eq!(middle.fetch_element(), &"Jupiter"); 
 
     let left;
     let right;
@@ -200,12 +202,12 @@ fn test_combining_two_four_element_pennants() {
     assert!(right.left.is_some());
     assert!(right.right.is_some());
     assert!(right.middle.is_none());
-    assert_eq!(left.into_element(), &"Earth");
-    assert_eq!(right.into_element(), &"Uranus");
+    assert_eq!(left.fetch_element(), &"Earth");
+    assert_eq!(right.fetch_element(), &"Uranus");
 }
 
 #[test]
-fn test_splitting_one_two_element_pennant() {
+fn test_splitting_two_element_pennant() {
     let mut x = Pennant::new("Mercury");
     let y = Pennant::new("Venus");
 
@@ -217,11 +219,58 @@ fn test_splitting_one_two_element_pennant() {
     assert_eq!(x.count, 1);
     assert_eq!(x.k, 0);
     assert!(x.middle.is_none());
+    assert_eq!(x.fetch_element(), &"Mercury");
 
     let split_pennant = split.unwrap();
 
     assert_eq!(split_pennant.count, 1);
     assert_eq!(split_pennant.k, 0);
     assert!(split_pennant.middle.is_none());
-    assert_eq!(split_pennant.into_element(), &"Venus");
+    assert_eq!(split_pennant.fetch_element(), &"Venus");
+}
+
+#[test]
+fn test_splitting_four_element_pennant() {
+    let mut x = Pennant::new("Mercury");
+    let y = Pennant::new("Venus");
+    x.combine(Box::new(y));
+
+    let mut a = Pennant::new("Earth");
+    let b = Pennant::new("Mars");
+    a.combine(Box::new(b));
+
+    x.combine(Box::new(a));
+
+    let split = x.split();
+    assert!(split.is_some());
+
+    assert_eq!(x.count, 2);
+    assert_eq!(x.k, 1);
+    assert!(x.middle.is_some());
+    assert_eq!(x.fetch_element(), &"Mercury");
+
+    let mut middle;
+    unsafe {
+        middle = Box::from_raw(x.middle.unwrap().as_ptr());
+    }
+
+    assert_eq!(middle.fetch_element(), &"Venus");
+
+    let split_pennant = split.unwrap();
+
+    assert_eq!(split_pennant.count, 2);
+    assert_eq!(split_pennant.k, 1);
+    assert!(split_pennant.middle.is_some());
+    assert_eq!(split_pennant.fetch_element(), &"Earth");
+
+    unsafe {
+        middle = Box::from_raw(split_pennant.middle.unwrap().as_ptr());
+    }
+
+    assert_eq!(middle.fetch_element(), &"Mars");
+}
+
+
+fn test_splitting_eight_element_pennant() {
+
 }
