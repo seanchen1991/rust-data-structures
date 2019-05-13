@@ -3,4 +3,11 @@
 [[package]]
 name = "bag"
 version = "0.1.0"
+dependencies = [
+ "pennant 0.1.0",
+]
+
+[[package]]
+name = "pennant"
+version = "0.1.0"
 

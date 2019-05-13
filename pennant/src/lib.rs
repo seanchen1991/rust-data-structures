@@ -7,7 +7,7 @@ use std::ptr::NonNull;
 /// is a complete binary tree. Each Pennant nodes stores
 /// a value. Bags store multiple Pennants in order to 
 /// store any arbitrary number of elements in the Bag.
-struct Pennant<T> {
+pub struct Pennant<T> {
     k: i32,
     element: T,
     count: usize,
