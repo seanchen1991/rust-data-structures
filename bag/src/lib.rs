@@ -1,48 +1,184 @@
 #![allow(dead_code)]
+#![feature(box_into_raw_non_null)]
 
 use std::ptr::NonNull;
 use pennant::Pennant;
 
 pub struct Bag<T> {
-    spine: Vector<Option<NonNull<Pennant<T>>>,
+    spine: Vec<Option<NonNull<Pennant<T>>>>,
     count: usize,
 }
 
 impl<T> Bag<T> {
+    /// Initializes a new empty bag whose spine defaults to a max degree of 10
     pub fn new() -> Self {
         Bag {
-            spine: Vector::new(),
+            spine: vec![None; 10],
+            count: 0,
+        }
+    }
+
+    /// Initializes a new empty bag whose spine has the specified max k value
+    pub fn with_degree(k: usize) -> Self {
+        Bag {
+            spine: vec![None; k],
             count: 0,
         }
     }
 
     pub fn insert(&mut self, element: T) {
-        let mut new_pennant = Box::new(Pennant::new(element));
-        insert_pennant(new_pennant, 0);
+        let new_pennant = Box::new(Pennant::new(element));
+        self.insert_pennant(new_pennant, 0);
     }
 
     fn insert_pennant(&mut self, mut pennant: Box<Pennant<T>>, index: usize) {
-        // if the spine is empty, just insert
-        if self.spine.is_empty() {
-            self.spine.push_back(new_pennant);
-            count += 1;
-            return;
+        // check if we need more slots in the spine
+        if index == self.spine.len() {
+            self.spine.resize_with(index * 2, || { None });
         }
 
-        // if the spine is not empty but the first spot
-        // has a Pennant there already, combine these two
-        // Pennants and try to insert at the next spot
-        else {
-            let mut current = self.spine[index];
-
-            match current {
-                None => current.replace(pennant),
-                Some(mut p) => {
-                    let mut other = p.take();
-                    current.combine(other);
-                    insert_pennant(current, index + 1);
+        match self.spine[index] {
+            None => {
+                self.spine[index].replace(Box::into_raw_non_null(pennant));
+                self.count += 1;
+                return;
+            },
+            Some(p) => {
+                let other;
+                unsafe {
+                    other = Box::from_raw(p.as_ptr());
                 }
+                self.spine[index] = None;
+                pennant.combine(other);
+                self.insert_pennant(pennant, index + 1);
             }
         }
     }
+
+    /// Unions the Bag with the input Bag, resulting in 
+    /// a single Bag that contains all the elements from
+    /// each Bag
+    pub fn union(&mut self, other: Bag<T>) {
+        for option in other.spine {
+            match option {
+                None => continue,
+                Some(pennant) => {
+                    let to_insert;
+                    unsafe {
+                        to_insert = Box::from_raw(pennant.as_ptr());
+                    }
+                    let k: usize = to_insert.k as usize;
+                    self.insert_pennant(to_insert, k);
+                }
+            }
+        }
+
+        self.count += other.count;
+    }
+
+    /// Splits the Bag into two roughly equally-sized Bags
+    /// Returns the Bag if it could be split, or None if
+    /// could not be split (i.e. trying to split a Bag with
+    /// 0 or 1 elements)
+    pub fn split(&mut self) -> Option<Bag<T>> {
+        unimplemented!();
+        // if self.count <= 1 {
+        //     None
+        // }
+
+        // let mut spare = Bag::with_degree(self.spine.len());
+        // // explicitly handle the case when count == 3
+        // if self.count == 3 {
+        //     // move the unary Pennant in the 0th slot over to the other Bag
+        //     spare.insert_pennant(self.spine[0], 0);
+        //     self.spine[0] = None;
+        // } else {
+        //     for p in self.spine.iter().skip(1) {
+        //         match p {
+        //             None => continue,
+        //             Some(mut pennant) => {
+
+        //             }
+        //         }
+        //     }
+        // }
+    }
+}
+
+#[test]
+fn test_inserting_into_empty_bag() {
+    let mut bag = Bag::with_degree(2);
+    bag.insert("Mercury");
+
+    assert_eq!(bag.count, 1);
+    assert!(bag.spine[0].is_some());
+}
+
+#[test]
+fn test_inserting_into_nonempty_bag() {
+    let mut bag = Bag::with_degree(3);
+    bag.insert("Mercury");
+    bag.insert("Venus");
+
+    assert_eq!(bag.count, 2);
+    assert!(bag.spine[0].is_none());
+    assert!(bag.spine[1].is_some());
+
+    bag.insert("Earth");
+
+    assert_eq!(bag.count, 3);
+    assert!(bag.spine[0].is_some());
+    assert!(bag.spine[1].is_some());
+
+    bag.insert("Mars");
+
+    assert_eq!(bag.count, 4);
+    assert!(bag.spine[0].is_none());
+    assert!(bag.spine[1].is_none());
+    assert!(bag.spine[2].is_some());
+}
+
+#[test]
+fn test_union_with_empty_bags() {
+   let mut bag: Bag<i32> = Bag::new();
+   let empty = Bag::new();
+   bag.union(empty);
+
+   assert_eq!(bag.count, 0);
+   assert!(bag.spine.iter().all(|x| x.is_none()));
+}
+
+#[test]
+fn test_union_with_one_nonempty_bag_and_one_empty_bag() {
+    let mut bag = Bag::new();
+    bag.insert("Mercury");
+    bag.insert("Venus");
+
+    let empty = Bag::new();
+
+    bag.union(empty);
+
+    assert_eq!(bag.count, 2);
+    assert!(bag.spine[1].is_some());
+}
+
+fn test_union_with_nonempty_bags() {
+    let mut bag = Bag::new();
+    bag.insert("Mercury");
+    bag.insert("Venus");
+
+    let mut other = Bag::new();
+    other.insert("Earth");
+    other.insert("Mars");
+    other.insert("Jupiter");
+    other.insert("Saturn");
+    other.insert("Uranus");
+    other.insert("Neptune");
+    other.insert("Pluto");
+
+    bag.union(other);
+
+    assert_eq!(bag.count, 9);
+    assert!(bag.spine[0].is_some());
+    assert!(bag.spine[3].is_some());
 }

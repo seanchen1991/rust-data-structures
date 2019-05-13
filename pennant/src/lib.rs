@@ -1,5 +1,5 @@
-#![feature(box_into_raw_non_null)]
 #![allow(dead_code)]
+#![feature(box_into_raw_non_null)]
 
 use std::ptr::NonNull;
 
@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 /// a value. Bags store multiple Pennants in order to 
 /// store any arbitrary number of elements in the Bag.
 pub struct Pennant<T> {
-    k: i32,
+    pub k: i32,
     element: T,
     count: usize,
     left: Option<NonNull<Pennant<T>>>,
@@ -28,7 +28,7 @@ impl<T> Pennant<T> {
         }
     }
 
-    fn fetch_element(&self) -> &T {
+    pub fn fetch_element(&self) -> &T {
         &self.element
     }
 
