@@ -4,6 +4,14 @@
 use std::ptr::NonNull;
 use pennant::Pennant;
 
+/// A Bag is a unordered set data structure that exhibits logarithmic
+/// insertions, unions, and splits. It achieves this by leveraging a
+/// binary tree data structure called a Pennant, where each Pennant has
+/// a degree k such that the number of elements in the Pennant is 2^(k+1).
+/// In order to hold any arbitrary number of elements, the Bag has an 
+/// array of Pennants called the spine. The Bag maintains the invariant
+/// that for some Pennant in one of the slots of the spine, the Pennant's
+/// k value matches the array index it resides in.
 pub struct Bag<T> {
     spine: Vec<Option<NonNull<Pennant<T>>>>,
     count: usize,
@@ -26,13 +34,20 @@ impl<T> Bag<T> {
         }
     }
 
+    /// Inserts the given element into the Bag
     pub fn insert(&mut self, element: T) {
         let new_pennant = Box::new(Pennant::new(element));
         self.insert_pennant(new_pennant, 0);
     }
 
+    /// Inserts a Pennant at the given array index of the spine.
+    /// If there already exists another Pennant at the index where the
+    /// input Pennant should go, the two Pennants are combined and then
+    /// we attempt to insert the combined Pennant at the next slot in
+    /// the spine.
     fn insert_pennant(&mut self, mut pennant: Box<Pennant<T>>, index: usize) {
         // check if we need more slots in the spine
+        // resize if necessary
         if index == self.spine.len() {
             self.spine.resize_with(index * 2, || { None });
         }
@@ -55,9 +70,8 @@ impl<T> Bag<T> {
         }
     }
 
-    /// Unions the Bag with the input Bag, resulting in 
-    /// a single Bag that contains all the elements from
-    /// each Bag
+    /// Unions the Bag with the input Bag, resulting in a single
+    /// Bag that contains all the elements from each Bag
     pub fn union(&mut self, other: Bag<T>) {
         for option in other.spine {
             match option {
@@ -77,9 +91,9 @@ impl<T> Bag<T> {
     }
 
     /// Splits the Bag into two roughly equally-sized Bags
-    /// Returns the Bag if it could be split, or None if
-    /// could not be split (i.e. trying to split a Bag with
-    /// 0 or 1 elements)
+    /// Returns the Bag if it was successfully split, or None 
+    /// if it could not be split (i.e. trying to split a Bag 
+    /// that contains 0 or 1 elements)
     pub fn split(&mut self) -> Option<Bag<T>> {
         unimplemented!();
         // if self.count <= 1 {
