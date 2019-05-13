@@ -46,8 +46,6 @@ impl<T> Bag<T> {
     /// we attempt to insert the combined Pennant at the next slot in
     /// the spine.
     fn insert_pennant(&mut self, mut pennant: Box<Pennant<T>>, index: usize) {
-        // check if we need more slots in the spine
-        // resize if necessary
         if index == self.spine.len() {
             self.spine.resize_with(index * 2, || { None });
         }
