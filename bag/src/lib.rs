@@ -74,10 +74,10 @@ impl<T> Bag<T> {
         for option in other.spine {
             match option {
                 None => continue,
-                Some(pennant) => {
+                Some(p) => {
                     let to_insert;
                     unsafe {
-                        to_insert = Box::from_raw(pennant.as_ptr());
+                        to_insert = Box::from_raw(p.as_ptr());
                     }
                     let k: usize = to_insert.k as usize;
                     self.insert_pennant(to_insert, k);
@@ -92,28 +92,43 @@ impl<T> Bag<T> {
     /// Returns the Bag if it was successfully split, or None 
     /// if it could not be split (i.e. trying to split a Bag 
     /// that contains 0 or 1 elements)
+    /// Note that when splitting a Bag with an odd number of 
+    /// elements, the returned Bag holds the remainder element
     pub fn split(&mut self) -> Option<Bag<T>> {
-        unimplemented!();
-        // if self.count <= 1 {
-        //     None
-        // }
+        if self.count <= 1 {
+            return None;
+        }
 
-        // let mut spare = Bag::with_degree(self.spine.len());
-        // // explicitly handle the case when count == 3
-        // if self.count == 3 {
-        //     // move the unary Pennant in the 0th slot over to the other Bag
-        //     spare.insert_pennant(self.spine[0], 0);
-        //     self.spine[0] = None;
-        // } else {
-        //     for p in self.spine.iter().skip(1) {
-        //         match p {
-        //             None => continue,
-        //             Some(mut pennant) => {
+        let mut spare = Bag::with_degree(self.spine.len());
+        
+        for option in self.spine {
+            match option {
+                None => continue,
+                Some(p) => {
+                    let mut pennant;
+                    unsafe {
+                        pennant = Box::from_raw(p.as_ptr());
+                    }
 
-        //             }
-        //         }
-        //     }
-        // }
+                    if pennant.k == 0 {
+                        spare.insert_pennant(pennant, 0);
+                        self.spine[0] = None;
+                    } else {
+                        let index: usize = pennant.k as usize;
+                        let other_half = pennant.split().unwrap();
+                        let other_half_k: usize = other_half.k as usize;
+                        spare.insert_pennant(other_half, other_half_k);
+
+                        let self_k: usize = pennant.k as usize;
+                        self.insert_pennant(pennant, self_k);
+                        self.spine[index] = None;
+                    }
+                }
+            }
+        }
+
+        self.count /= 2;
+        Some(spare)
     }
 }
 
