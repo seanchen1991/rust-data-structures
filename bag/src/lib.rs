@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![feature(box_into_raw_non_null)]
 
+use std::mem;
 use std::ptr::NonNull;
 use pennant::Pennant;
 
@@ -94,15 +95,19 @@ impl<T> Bag<T> {
     /// that contains 0 or 1 elements)
     /// Note that when splitting a Bag with an odd number of 
     /// elements, the returned Bag holds the remainder element
-    pub fn split(&mut self) -> Option<Bag<T>> {
-        if self.count <= 1 {
-            return None;
+    pub fn split(&mut self) -> Bag<T> {
+        let count = self.count;
+        if count <= 1 {
+            return mem::replace(self, Self::new());
         }
 
-        let mut spare = Bag::with_degree(self.spine.len());
-        
-        for option in self.spine {
-            match option {
+        let len = self.spine.len();
+        let mut spare = Bag::with_degree(len);
+
+        for i in 0..len {
+            let current = mem::replace(&mut self.spine[i], None);
+
+            match current {
                 None => continue,
                 Some(p) => {
                     let mut pennant;
@@ -110,25 +115,18 @@ impl<T> Bag<T> {
                         pennant = Box::from_raw(p.as_ptr());
                     }
 
-                    if pennant.k == 0 {
-                        spare.insert_pennant(pennant, 0);
-                        self.spine[0] = None;
-                    } else {
-                        let index: usize = pennant.k as usize;
-                        let other_half = pennant.split().unwrap();
-                        let other_half_k: usize = other_half.k as usize;
-                        spare.insert_pennant(other_half, other_half_k);
+                    let other_half = pennant.split().unwrap();
+                    let other_half_k: usize = other_half.k as usize;
+                    spare.insert_pennant(other_half, other_half_k);
 
-                        let self_k: usize = pennant.k as usize;
-                        self.insert_pennant(pennant, self_k);
-                        self.spine[index] = None;
-                    }
+                    let self_k: usize = pennant.k as usize;
+                    self.insert_pennant(pennant, self_k);
                 }
             }
         }
 
         self.count /= 2;
-        Some(spare)
+        spare
     }
 }
 
