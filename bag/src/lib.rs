@@ -35,6 +35,10 @@ impl<T> Bag<T> {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.count
+    }
+
     /// Inserts the given element into the Bag
     pub fn insert(&mut self, element: T) {
         let new_pennant = Box::new(Pennant::new(element));
@@ -53,8 +57,8 @@ impl<T> Bag<T> {
 
         match self.spine[index] {
             None => {
+                self.count += pennant.len();
                 self.spine[index].replace(Box::into_raw_non_null(pennant));
-                self.count += 1;
                 return;
             },
             Some(p) => {
@@ -62,6 +66,7 @@ impl<T> Bag<T> {
                 unsafe {
                     other = Box::from_raw(p.as_ptr());
                 }
+                self.count -= other.len();
                 self.spine[index] = None;
                 pennant.combine(other);
                 self.insert_pennant(pennant, index + 1);
@@ -72,6 +77,8 @@ impl<T> Bag<T> {
     /// Unions the Bag with the input Bag, resulting in a single
     /// Bag that contains all the elements from each Bag
     pub fn union(&mut self, other: Bag<T>) {
+        let len = other.len();
+
         for option in other.spine {
             match option {
                 None => continue,
@@ -86,7 +93,7 @@ impl<T> Bag<T> {
             }
         }
 
-        self.count += other.count;
+        self.count += len;
     }
 
     /// Splits the Bag into two roughly equally-sized Bags
@@ -94,7 +101,7 @@ impl<T> Bag<T> {
     /// if it could not be split (i.e. trying to split a Bag 
     /// that contains 0 or 1 elements)
     /// Note that when splitting a Bag with an odd number of 
-    /// elements, the returned Bag holds the remainder element
+    /// elements, the original Bag holds the remainder element
     pub fn split(&mut self) -> Bag<T> {
         let count = self.count;
         if count <= 1 {
@@ -114,18 +121,19 @@ impl<T> Bag<T> {
                     unsafe {
                         pennant = Box::from_raw(p.as_ptr());
                     }
+                    self.count -= pennant.len();
 
-                    let other_half = pennant.split().unwrap();
-                    let other_half_k: usize = other_half.k as usize;
-                    spare.insert_pennant(other_half, other_half_k);
+                    if let Some(other_pennant) = pennant.split() {
+                        let other_pennant_k: usize = other_pennant.degree() as usize;
+                        spare.insert_pennant(other_pennant, other_pennant_k);
+                    }
 
-                    let self_k: usize = pennant.k as usize;
+                    let self_k: usize = pennant.degree() as usize;
                     self.insert_pennant(pennant, self_k);
                 }
             }
         }
 
-        self.count /= 2;
         spare
     }
 }
@@ -135,7 +143,7 @@ fn test_inserting_into_empty_bag() {
     let mut bag = Bag::with_degree(2);
     bag.insert("Mercury");
 
-    assert_eq!(bag.count, 1);
+    assert_eq!(bag.len(), 1);
     assert!(bag.spine[0].is_some());
 }
 
@@ -145,20 +153,27 @@ fn test_inserting_into_nonempty_bag() {
     bag.insert("Mercury");
     bag.insert("Venus");
 
-    assert_eq!(bag.count, 2);
+    assert_eq!(bag.len(), 2);
     assert!(bag.spine[0].is_none());
     assert!(bag.spine[1].is_some());
 
     bag.insert("Earth");
 
-    assert_eq!(bag.count, 3);
+    assert_eq!(bag.len(), 3);
     assert!(bag.spine[0].is_some());
     assert!(bag.spine[1].is_some());
 
     bag.insert("Mars");
 
-    assert_eq!(bag.count, 4);
+    assert_eq!(bag.len(), 4);
     assert!(bag.spine[0].is_none());
+    assert!(bag.spine[1].is_none());
+    assert!(bag.spine[2].is_some());
+
+    bag.insert("Jupiter");
+
+    assert_eq!(bag.len(), 5);
+    assert!(bag.spine[0].is_some());
     assert!(bag.spine[1].is_none());
     assert!(bag.spine[2].is_some());
 }
@@ -175,15 +190,15 @@ fn test_union_with_empty_bags() {
 
 #[test]
 fn test_union_with_one_nonempty_bag_and_one_empty_bag() {
-    let mut bag = Bag::new();
+    let mut bag = Bag::with_degree(3);
     bag.insert("Mercury");
     bag.insert("Venus");
 
-    let empty = Bag::new();
+    let empty = Bag::with_degree(2);
 
     bag.union(empty);
 
-    assert_eq!(bag.count, 2);
+    assert_eq!(bag.len(), 2);
     assert!(bag.spine[1].is_some());
 }
 
@@ -203,7 +218,59 @@ fn test_union_with_nonempty_bags() {
 
     bag.union(other);
 
-    assert_eq!(bag.count, 9);
+    assert_eq!(bag.len(), 9);
     assert!(bag.spine[0].is_some());
     assert!(bag.spine[3].is_some());
+}
+
+#[test]
+fn test_splitting_empty_bag() {
+    let mut bag: Bag<i32> = Bag::with_degree(2);
+    let other_bag = bag.split();
+
+    assert_eq!(other_bag.len(), 0);
+}
+
+#[test]
+fn test_splitting_bag_with_one_element() {
+    let mut bag = Bag::with_degree(2);
+    bag.insert("Pluto");
+
+    let other_bag = bag.split();
+
+    assert_eq!(bag.len(), 0);
+    assert_eq!(other_bag.len(), 1);
+}
+
+#[test]
+fn test_splitting_bag_with_even_elements() {
+   let mut bag = Bag::with_degree(3);
+    bag.insert("Mercury");
+    bag.insert("Venus");
+    bag.insert("Earth");
+    bag.insert("Mars");
+
+    let other_bag = bag.split();
+
+    assert_eq!(bag.len(), 2);
+    assert_eq!(other_bag.len(), 2);
+}
+
+#[test]
+fn test_splitting_bag_with_odd_elements() {
+    let mut bag = Bag::new();
+    bag.insert("Mercury");
+    bag.insert("Venus");
+    bag.insert("Earth");
+    bag.insert("Mars");
+    bag.insert("Jupiter");
+    bag.insert("Saturn");
+    bag.insert("Uranus");
+    bag.insert("Neptune");
+    bag.insert("Pluto");
+
+    let other_bag = bag.split();
+
+    assert_eq!(bag.len(), 5);
+    assert_eq!(other_bag.len(), 4);
 }

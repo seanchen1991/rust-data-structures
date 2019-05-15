@@ -32,12 +32,20 @@ impl<T> Pennant<T> {
         &self.element
     }
 
+    pub fn len(&self) -> usize {
+        self.count
+    }
+
+    pub fn degree(&self) -> i32 {
+        self.k
+    }
+
     /// Combines two Pennants into a new Pennant whose total
     /// number of nodes is 2^(k+1) where k is the value of the 
     /// prior pennant. Note that the Bag will maintain the 
     /// invariant that only Pennants of equal k will be combined.
     pub fn combine(&mut self, mut pennant: Box<Pennant<T>>) {
-        assert!(self.k == pennant.k);
+        assert!(self.degree() == pennant.degree());
 
         match self.middle {
             None => {
@@ -49,7 +57,7 @@ impl<T> Pennant<T> {
                 pennant.left = Some(middle);
                 pennant.right = pennant.middle;
                 pennant.middle = None;
-                self.count += pennant.count;
+                self.count += pennant.len();
                 self.k = f32::log2(self.count as f32) as i32;
                 self.middle = Some(Box::into_raw_non_null(pennant));
             }
@@ -65,7 +73,6 @@ impl<T> Pennant<T> {
             None => None,
             Some(middle) => {
                 let mut new_pennant;
-                
                 unsafe {
                     new_pennant = Box::from_raw(middle.as_ptr());
                 }
@@ -78,8 +85,8 @@ impl<T> Pennant<T> {
                 self.count /= 2;
                 self.k = f32::log2(self.count as f32) as i32;
 
-                new_pennant.count = self.count;
-                new_pennant.k = self.k;
+                new_pennant.count = self.len();
+                new_pennant.k = self.degree();
 
                 Some(new_pennant)
             }
@@ -94,8 +101,8 @@ fn test_combining_two_one_element_pennants() {
 
     x.combine(Box::new(y));
 
-    assert_eq!(x.count, 2);
-    assert_eq!(x.k, 1);
+    assert_eq!(x.len(), 2);
+    assert_eq!(x.degree(), 1);
     assert_eq!(x.fetch_element(), &"Mercury");
     assert!(x.left.is_none());
     assert!(x.right.is_none());
@@ -121,8 +128,8 @@ fn test_combining_two_two_element_pennants() {
 
     x.combine(Box::new(a));
 
-    assert_eq!(x.count, 4);
-    assert_eq!(x.k, 2);
+    assert_eq!(x.len(), 4);
+    assert_eq!(x.degree(), 2);
     assert!(x.left.is_none());
     assert!(x.right.is_none());
     assert!(x.middle.is_some());
@@ -172,8 +179,8 @@ fn test_combining_two_four_element_pennants() {
     c.combine(Box::new(e));
     x.combine(Box::new(c));
 
-    assert_eq!(x.count, 8);
-    assert_eq!(x.k, 3);
+    assert_eq!(x.len(), 8);
+    assert_eq!(x.degree(), 3);
     assert!(x.left.is_none());
     assert!(x.right.is_none());
     assert!(x.middle.is_some());
@@ -215,15 +222,15 @@ fn test_splitting_two_element_pennant() {
     let split = x.split();
     assert!(split.is_some());
 
-    assert_eq!(x.count, 1);
-    assert_eq!(x.k, 0);
+    assert_eq!(x.len(), 1);
+    assert_eq!(x.degree(), 0);
     assert!(x.middle.is_none());
     assert_eq!(x.fetch_element(), &"Mercury");
 
     let split_pennant = split.unwrap();
 
-    assert_eq!(split_pennant.count, 1);
-    assert_eq!(split_pennant.k, 0);
+    assert_eq!(split_pennant.len(), 1);
+    assert_eq!(split_pennant.degree(), 0);
     assert!(split_pennant.middle.is_none());
     assert_eq!(split_pennant.fetch_element(), &"Venus");
 }
@@ -243,8 +250,8 @@ fn test_splitting_four_element_pennant() {
     let split = x.split();
     assert!(split.is_some());
 
-    assert_eq!(x.count, 2);
-    assert_eq!(x.k, 1);
+    assert_eq!(x.len(), 2);
+    assert_eq!(x.degree(), 1);
     assert!(x.middle.is_some());
     assert!(x.left.is_none());
     assert!(x.right.is_none());
@@ -262,8 +269,8 @@ fn test_splitting_four_element_pennant() {
 
     let split_pennant = split.unwrap();
 
-    assert_eq!(split_pennant.count, 2);
-    assert_eq!(split_pennant.k, 1);
+    assert_eq!(split_pennant.len(), 2);
+    assert_eq!(split_pennant.degree(), 1);
     assert!(split_pennant.middle.is_some());
     assert!(split_pennant.left.is_none()); 
     assert!(split_pennant.right.is_none());
@@ -305,8 +312,8 @@ fn test_splitting_eight_element_pennant() {
     let split = x.split();
     assert!(split.is_some());
 
-    assert_eq!(x.count, 4);
-    assert_eq!(x.k, 2);
+    assert_eq!(x.len(), 4);
+    assert_eq!(x.degree(), 2);
     assert!(x.middle.is_some());
     assert!(x.left.is_none());
     assert!(x.right.is_none());
@@ -336,8 +343,8 @@ fn test_splitting_eight_element_pennant() {
 
     let split_pennant = split.unwrap();
 
-    assert_eq!(split_pennant.count, 4);
-    assert_eq!(split_pennant.k, 2);
+    assert_eq!(split_pennant.len(), 4);
+    assert_eq!(split_pennant.degree(), 2);
     assert!(split_pennant.left.is_none());
     assert!(split_pennant.middle.is_some());
     assert!(split_pennant.right.is_none());
