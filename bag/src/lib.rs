@@ -15,6 +15,7 @@ use pennant::Pennant;
 /// k value matches the array index it resides in.
 pub struct Bag<T> {
     spine: Vec<Option<NonNull<Pennant<T>>>>,
+    capacity: usize,
     count: usize,
 }
 
@@ -23,16 +24,25 @@ impl<T> Bag<T> {
     pub fn new() -> Self {
         Bag {
             spine: vec![None; 8],
+            capacity: 255,
             count: 0,
         }
     }
 
     /// Initializes a new empty bag whose spine has the specified max k value
     pub fn with_degree(k: usize) -> Self {
+        let degree: u32 = (k + 1) as u32;
         Bag {
             spine: vec![None; k],
+            capacity: (i32::pow(2, degree) - 1) as usize,
             count: 0,
         }
+    }
+
+    /// Returns the maximum number of elements that the Bag can
+    /// hold without re-allocating 
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     pub fn len(&self) -> usize {
@@ -52,7 +62,9 @@ impl<T> Bag<T> {
     /// the spine.
     fn insert_pennant(&mut self, mut pennant: Box<Pennant<T>>, index: usize) {
         if index == self.spine.len() {
-            self.spine.resize_with(index * 2, || { None });
+            let new_len: u32 = (index * 2 + 1) as u32;
+            self.spine.resize_with(new_len as usize, || { None });
+            self.capacity = (i32::pow(2, new_len) - 1) as usize;
         }
 
         match self.spine[index] {
