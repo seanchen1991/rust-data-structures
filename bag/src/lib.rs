@@ -22,7 +22,7 @@ impl<T> Bag<T> {
     /// Initializes a new empty bag whose spine defaults to a max degree of 10
     pub fn new() -> Self {
         Bag {
-            spine: vec![None; 10],
+            spine: vec![None; 8],
             count: 0,
         }
     }
