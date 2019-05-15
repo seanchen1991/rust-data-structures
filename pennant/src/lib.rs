@@ -40,10 +40,14 @@ impl<T> Pennant<T> {
         self.k
     }
 
-    /// Combines two Pennants into a new Pennant whose total
-    /// number of nodes is 2^(k+1) where k is the value of the 
-    /// prior pennant. Note that the Bag will maintain the 
-    /// invariant that only Pennants of equal k will be combined.
+    /// Combines two Pennants into a single Pennant whose
+    /// total number of elements is the sum of the number 
+    /// of elements of the combined Pennants.
+    /// Note that the Bag will maintain the invariant 
+    /// that only Pennants of equal k will be combined.
+    /// Thus combining two Pennants should result in a new
+    /// Pennant whose degree is k + 1 for the old degree
+    /// of the combined Pennants.
     pub fn combine(&mut self, mut pennant: Box<Pennant<T>>) {
         assert!(self.degree() == pennant.degree());
 
@@ -67,7 +71,8 @@ impl<T> Pennant<T> {
     /// Performs the inverse of the `combine` method. Splits
     /// a Pennant into two Pennants of equal size, updating
     /// each new Pennant's k value accordingly.
-    /// Returns the split-off Pennant.
+    /// Mutates the original Pennant and returns the 
+    /// split-off Pennant.
     pub fn split(&mut self) -> Option<Box<Pennant<T>>> {
         match self.middle {
             None => None,
