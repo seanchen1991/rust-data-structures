@@ -93,7 +93,7 @@ impl<T: Ord> Btree<T> {
                 // handle internal Node 
                 if node.children[index].keys.len() == self.max_keys {
                     // split child Node
-                    node.split.child(self.min_keys, self.max_keys, index);
+                    node.split_child(self.min_keys, self.max_keys, index);
                     match val.cmp(&node.keys[index]) {
                         Ordering::Equal => return false,
                         Ordering::Greater => index += 1,
@@ -122,8 +122,53 @@ impl<T: Ord> Btree<T> {
 
         result
     }
+    
+    pub fn remove_sub(&mut self, val: &T) -> bool {
+        let (mut found, mut index) = self.root.search(val);
+        let mut node = &mut self.root;
+        let mut is_root = true;
 
+        loop {
+            assert!(node.keys.len() <= self.max_keys);
+            assert!(is_root || node.keys.len() > self.min_keys);
 
+            if node.is_leaf() {
+                if found {
+                    // remove from this leaf Node
+                    node.keys.remove(index);
+                }
+                
+                return found;
+            } else {
+                // internal Node
+                if found {
+                    // key is stored at the current Node
+                    if node.children[index].keys.len() > self.min_keys {
+                        // replace key with predecessor
+                        node.keys[index] = node.children[index].remove_max(self.min_keys);
+                        return true;
+                    } else if node.children[index + 1].keys.len() > self.min_keys {
+                        node.keys[index] = node.children[index + 1].remove_min(self.min_keys);
+                        return true;
+                    } else {
+                        // merge key and right Node into left Node, then recurse
+                        node.merge_children(self.min_keys, index);
+                        // index known due to merging; no need to search
+                        node = node.children[index].as_mut();
+                        index = self.min_keys;
+                    }
+                } else {
+                    // key might be found in some child
+                    node = node.ensure_child_remove(self.min_keys, index);
+                    let (f, i) = node.search(val);
+                    found = f;
+                    index = i;
+                }
+
+                is_root = false;
+            }
+        }
+    }
 }
 
 impl<T: Ord> Node<T> {
@@ -231,7 +276,7 @@ impl<T: Ord> Node<T> {
                 self.children[index].children.insert(0, temp);
             }
 
-            let temp = self.chilren[index - 1].keys.pop().unwrap();
+            let temp = self.children[index - 1].keys.pop().unwrap();
             let temp = std::mem::replace(&mut self.keys[index - 1], temp);
             self.children[index].keys.insert(0, temp);
         } else if right_size > min_keys {
