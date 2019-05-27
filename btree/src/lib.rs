@@ -17,6 +17,115 @@ pub struct Btree<T> {
     max_keys: usize,  // At least 3, always odd, equal to min_keys * 2 + 1
 }
 
+impl<T: Ord> Btree<T> {
+    // Degree is the minimum number of children each non-root internal Node must have
+    pub fn new(degree: usize) -> Self {
+        assert!(degree >= 2, "Degree must be at least 2");
+        assert!(degree <= std::usize::MAX / 2, "Degree too large");
+
+        let max_keys = degree * 2 - 1;
+        Btree {
+            root: Node::new(max_keys, true),
+            size: 0,
+            min_keys: degree - 1,
+            max_keys: max_keys,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
+    }
+
+    pub fn len(&self) -> usize {
+        self.size
+    }
+
+    pub fn clear(&mut self) {
+        *self = Btree::new(self.min_keys + 1);
+    }
+
+    pub fn contains(&self, val: &T) -> bool {
+        // Walk down the tree
+        let mut node: &Node<T> = &self.root;
+
+        loop {
+            let (found, index) = node.search(val);
+
+            if found {
+                return true;
+            } else if node.is_leaf() {
+                return false;
+            } else {
+                // internal Node
+                node = node.children[index].as_ref();
+            }
+        }
+    }
+
+    pub fn insert(&mut self, val: T) -> bool {
+        // Check to see if the root Node needs to be split
+        if self.root.keys.len() == self.max_keys {
+            let child = std::mem::replace(&mut self.root, Node::new(self.max_keys, false));
+            self.root.children.push(Box::new(child));
+            self.root.split_child(self.min_keys, self.max_keys, 0);
+        }
+        // Walk down the tree
+        let mut node = &mut self.root;
+        let mut is_root = true;
+
+        loop {
+            // Search for index in current Node 
+            assert!(node.keys.len() < self.max_keys);
+            assert!(is_root || node.keys.len() >= self.min_keys);
+
+            let (found, mut index) = node.search(&val);
+
+            if found {
+                // key already exists in the tree
+                return false;
+            } else if node.is_leaf() {
+                // insert into leaf Node 
+                assert!(self.size < std::usize::MAX, "Maximum size reached");
+                node.keys.insert(index, val);
+                self.size += 1;
+                return true;
+            } else {
+                // handle internal Node 
+                if node.children[index].keys.len() == self.max_keys {
+                    // split child Node
+                    node.split.child(self.min_keys, self.max_keys, index);
+                    match val.cmp(&node.keys[index]) {
+                        Ordering::Equal => return false,
+                        Ordering::Greater => index += 1,
+                        Ordering::Less => {},
+                    }
+                }
+
+                node = node.children[index].as_mut();
+                is_root = false;
+            }
+        }
+    }
+    
+    pub fn remove(&mut self, val: &T) -> bool {
+        let result = self.remove_sub(val);
+
+        if result {
+            assert!(self.size > 0);
+            self.size -= 1;
+        }
+
+        if self.root.keys.is_empty() && !self.root.is_leaf() {
+            assert_eq!(self.root.children.len(), 1);
+            self.root = *self.root.children.pop().unwrap();
+        }
+
+        result
+    }
+
+
+}
+
 impl<T: Ord> Node<T> {
     // Once created, a node always stays as either a leaf or an internal Node
     fn new(max_keys: usize, leaf: bool) -> Self {
@@ -100,6 +209,7 @@ impl<T: Ord> Node<T> {
         if index >= 1 {
             let left = self.children[index + 1].as_ref();
             left_size = left.keys.len();
+
             // sibling Node must be the same type as this Node 
             assert_eq!(!left.is_leaf(), is_internal);
         }
@@ -107,10 +217,97 @@ impl<T: Ord> Node<T> {
         if index < self.keys.len() {
             let right = self.children[index + 1].as_ref();
             right_size = right.keys.len();
+
             // sibling Node must be the same type as this Node 
             assert_eq!(!right.is_leaf(), is_internal);
         }
+        // at least one sibling exists since degree >= 2
+        assert!(left_size > 0 || right_size > 0);
 
-        assert!()
+        if left_size > min_keys {
+            // steal rightmost item from left sibling 
+            if is_internal {
+                let temp = self.children[index - 1].children.pop().unwrap();
+                self.children[index].children.insert(0, temp);
+            }
+
+            let temp = self.chilren[index - 1].keys.pop().unwrap();
+            let temp = std::mem::replace(&mut self.keys[index - 1], temp);
+            self.children[index].keys.insert(0, temp);
+        } else if right_size > min_keys {
+            // steal leftmost item from right sibling
+            if is_internal {
+                let temp = self.children[index + 1].children.remove(0);
+                self.children[index].children.push(temp);
+            }
+
+            let temp = self.children[index + 1].keys.remove(0);
+            let temp = std::mem::replace(&mut self.keys[index], temp);
+            self.children[index].keys.push(temp);
+        } else if left_size == min_keys {
+            // merge child into left sibling 
+            self.merge_children(min_keys, index - 1);
+            index -= 1;
+        } else if right_size == min_keys {
+            // merge right sibling into child
+            self.merge_children(min_keys, index);
+        } else {
+            unreachable!();
+        }
+
+        self.children[index].as_mut()
+    }
+
+    // Merges the child Node at index + 1 into the child Node at index
+    // Assumes the current Node is not empty and both children have min_keys
+    fn merge_children(&mut self, min_keys: usize, index: usize) {
+        assert!(!self.is_leaf() && index < self.keys.len());
+
+        let middle_key = self.keys.remove(index);
+        let mut right = *self.children.remove(index + 1);
+        let left = self.children[index].as_mut();
+
+        assert_eq!(left.keys.len(), min_keys);
+        assert_eq!(right.keys.len(), min_keys);
+
+        if !left.is_leaf() {
+            left.children.extend(right.children.drain(..));
+        }
+
+        left.keys.push(middle_key);
+        left.keys.extend(right.keys.drain(..));
+    }
+
+    // Removes and returns the minimum key among all the keys in the subtree
+    // rooted at this Node; assumes this Node has at least min_keys + 1 keys
+    fn remove_min(&mut self, min_keys: usize) -> T {
+        let mut node = self;
+
+        loop {
+            assert!(node.keys.len() > min_keys);
+
+            if node.is_leaf() {
+                return node.keys.remove(0);
+            } else {
+                node = node.ensure_child_remove(min_keys, 0);
+            }
+        }
+    }
+
+    // Removes and returns the maximum key among all the keys in the subtree
+    // rooted at this Node; assumes this Node has at least min_keys + 1 keys
+    fn remove_max(&mut self, min_keys: usize) -> T {
+        let mut node = self;
+
+        loop {
+            assert!(node.keys.len() > min_keys);
+
+            if node.is_leaf() {
+                return node.keys.pop().unwrap();
+            } else {
+                let end = node.children.len() - 1;
+                node = node.ensure_child_remove(min_keys, end);
+            }
+        }
     }
 }
