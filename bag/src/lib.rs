@@ -15,7 +15,7 @@ use pennant::Pennant;
 /// k value matches the array index it resides in.
 pub struct Bag<T> {
     spine: Vec<Option<NonNull<Pennant<T>>>>,
-    capacity: usize,
+    capacity: u32,
     count: usize,
 }
 
@@ -34,14 +34,14 @@ impl<T> Bag<T> {
         let degree: u32 = (k + 1) as u32;
         Bag {
             spine: vec![None; k],
-            capacity: (i32::pow(2, degree) - 1) as usize,
+            capacity: (i32::pow(2, degree) - 1) as u32,
             count: 0,
         }
     }
 
     /// Returns the maximum number of elements that the Bag can
     /// hold without re-allocating 
-    pub fn capacity(&self) -> usize {
+    pub fn capacity(&self) -> u32 {
         self.capacity
     }
 
@@ -64,7 +64,7 @@ impl<T> Bag<T> {
         if index == self.spine.len() {
             let new_len: u32 = (index * 2 + 1) as u32;
             self.spine.resize_with(new_len as usize, || { None });
-            self.capacity = (i32::pow(2, new_len) - 1) as usize;
+            self.capacity = (i32::pow(2, new_len) - 1) as u32;
         }
 
         match self.spine[index] {

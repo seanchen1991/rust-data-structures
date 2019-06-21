@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 /// a value. Bags store multiple Pennants in order to 
 /// store any arbitrary number of elements in the Bag.
 pub struct Pennant<T> {
-    pub k: i32,
+    pub k: u32,
     element: T,
     count: usize,
     left: Option<NonNull<Pennant<T>>>,
@@ -36,7 +36,7 @@ impl<T> Pennant<T> {
         self.count
     }
 
-    pub fn degree(&self) -> i32 {
+    pub fn degree(&self) -> u32 {
         self.k
     }
 
@@ -62,7 +62,7 @@ impl<T> Pennant<T> {
                 pennant.right = pennant.middle;
                 pennant.middle = None;
                 self.count += pennant.len();
-                self.k = f32::log2(self.count as f32) as i32;
+                self.k = f32::log2(self.count as f32) as u32;
                 self.middle = Some(Box::into_raw_non_null(pennant));
             }
         }
@@ -88,7 +88,7 @@ impl<T> Pennant<T> {
                 new_pennant.right = None;
 
                 self.count /= 2;
-                self.k = f32::log2(self.count as f32) as i32;
+                self.k = f32::log2(self.count as f32) as u32;
 
                 new_pennant.count = self.len();
                 new_pennant.k = self.degree();
