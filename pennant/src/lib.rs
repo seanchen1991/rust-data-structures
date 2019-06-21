@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 #![feature(box_into_raw_non_null)]
 
-use std::collections::HashSet;
 use std::ptr::NonNull;
 
 /// A Pennant is comprised of a unary root whose child
