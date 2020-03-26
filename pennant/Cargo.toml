@@ -1,7 +1,0 @@
-[package]
-name = "pennant"
-version = "0.1.0"
-authors = ["Sean <seanchen11235@gmail.com>"]
-edition = "2018"
-
-[dependencies]

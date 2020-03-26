@@ -1,20 +1,18 @@
-#![allow(dead_code)]
-
 use std::cmp::Ordering;
 
 struct PriorityQueue<T> {
     storage: Vec<T>,
-    comparator: Box<Fn(&T, &T) -> Ordering>,
+    comparator: Box<dyn Fn(&T, &T) -> Ordering>,
 }
 
 struct QueueIter<T> {
-    values: Vec<T>
+    values: Vec<T>,
 }
 
 impl<T: Ord> PriorityQueue<T> {
     /// New PriorityQueue instance with default comparator
     pub fn new() -> Self {
-        PriorityQueue { 
+        PriorityQueue {
             storage: Vec::new(),
             comparator: Box::new(|a: &T, b: &T| a.cmp(b)),
         }
@@ -22,7 +20,8 @@ impl<T: Ord> PriorityQueue<T> {
 
     /// New PriorityQueue instance with specified comparator
     pub fn new_with<C>(comparator: C) -> Self
-        where C: Fn(&T, &T) -> Ordering + 'static
+    where
+        C: Fn(&T, &T) -> Ordering + 'static,
     {
         PriorityQueue {
             storage: Vec::new(),
@@ -32,17 +31,16 @@ impl<T: Ord> PriorityQueue<T> {
 
     /// Returns a reference to the priority value
     pub fn get_priority(&self) -> Option<&T> {
-        if self.len() > 0 {
-            Some(&self.storage[0])
-        } else {
-            None
+        match self.len() {
+            0 => None,
+            _ => Some(&self.storage[0]),
         }
     }
 
     pub fn len(&self) -> usize {
         self.storage.len()
     }
-    
+
     /// Takes ownership of value and inserts it
     pub fn insert(&mut self, value: T) {
         let old_len = self.storage.len();
@@ -52,17 +50,17 @@ impl<T: Ord> PriorityQueue<T> {
 
     /// Removes and returns the owned priority value
     pub fn delete(&mut self) -> Option<T> {
-        if self.len() > 1 {
-            // Remove the priority value from storage
-            // Replaces it with last element in storage
-            let rv = self.storage.swap_remove(0);
-            // Sift the element at index 0 down to an appropriate spot
-            self.sift_down(0);
-            Some(rv)     
-        } else if self.len() == 1 {
-            self.storage.pop()
-        } else {
-            None
+        match self.len() {
+            0 => None,
+            1 => self.storage.pop(),
+            _ => {
+                // Remove the priority value from storage
+                // Replaces it with the last element in storage
+                let rv = self.storage.swap_remove(0);
+                // Sift the element at index 0 down to an appropriate spot
+                self.sift_down(0);
+                Some(rv)
+            }
         }
     }
 
@@ -87,7 +85,10 @@ impl<T: Ord> PriorityQueue<T> {
         let mut child = 2 * pos + 1;
         while child <= end {
             let right = child + 1;
-            if right <= end && (self.comparator)(&self.storage[child], &self.storage[right]) != Ordering::Greater {
+            if right <= end
+                && (self.comparator)(&self.storage[child], &self.storage[right])
+                    != Ordering::Greater
+            {
                 child = right;
             }
             if (self.comparator)(&self.storage[pos], &self.storage[child]) == Ordering::Less {
@@ -245,7 +246,7 @@ fn test_default_iterator_correctness() {
 
     for el in values {
         pq.insert(el);
-    } 
+    }
 
     assert_eq!(pq.iter().collect::<Vec<_>>(), expected);
 }
