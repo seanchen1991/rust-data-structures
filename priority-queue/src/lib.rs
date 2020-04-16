@@ -121,9 +121,10 @@ impl<T: Ord> QueueIter<T> {
     /// Populate QueueIter by repeatedly calling `delete`
     /// until the queue is empty
     fn populate_iter(&mut self, mut pq: PriorityQueue<T>) {
-        while pq.len() > 0 {
-            self.values.push(pq.delete().unwrap());
+        while let Some(val) = pq.delete() {
+            self.values.push(val);
         }
+
         self.values.reverse();
     }
 }
@@ -132,11 +133,7 @@ impl<T: Ord> Iterator for QueueIter<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        if self.values.len() > 0 {
-            self.values.pop()
-        } else {
-            None
-        }
+        self.values.pop()
     }
 }
 
