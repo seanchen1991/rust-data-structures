@@ -14,9 +14,9 @@ pub struct LRUCache<A: Array> {
     /// the array, its index never changes.
     entries: ArrayVec<A>,
     /// Index of the first entry in the cache.
-    head: u16,
+    head: usize,
     /// Index of the last entry in the cache.
-    tail: u16,
+    tail: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -24,9 +24,9 @@ pub struct Entry<T> {
     /// The value stored at this entry
     val: T,
     /// Index of the previous entry in the "linked list"
-    prev: u16,
+    prev: usize,
     /// Index of the next entry in the "linked list"
-    next: u16,
+    next: usize,
 }
 
 impl<A: Array> Default for LRUCache<A> {
@@ -38,7 +38,7 @@ impl<A: Array> Default for LRUCache<A> {
         };
 
         assert!(
-            cache.entries.capacity() < u16::max_value() as usize,
+            cache.entries.capacity() < usize::max_value(),
             "Capacity overflow"
         );
 
@@ -139,7 +139,7 @@ where
     /// Touch a given entry at the given index, putting it first
     /// in the list.
     #[inline]
-    fn touch_index(&mut self, index: u16) {
+    fn touch_index(&mut self, index: usize) {
         if index != self.head {
             self.remove(index);
             self.push_front(index);
@@ -172,11 +172,11 @@ where
 
         let new_head = if self.entries.len() == self.entries.capacity() {
             let last_index = self.pop_back();
-            self.entries[last_index as usize] = entry;
+            self.entries[last_index] = entry;
             last_index
         } else {
             self.entries.push(entry);
-            self.entries.len() as u16 - 1
+            self.entries.len() - 1
         };
 
         self.push_front(new_head);
@@ -188,12 +188,12 @@ where
     }
 
     /// Insert a new entry at the head of the cache.
-    fn push_front(&mut self, index: u16) {
+    fn push_front(&mut self, index: usize) {
         if self.entries.len() == 1 {
             self.tail = index;
         } else {
-            self.entries[index as usize].next = self.head;
-            self.entries[self.head as usize].prev = index;
+            self.entries[index].next = self.head;
+            self.entries[self.head].prev = index;
         }
 
         self.head = index;
@@ -203,9 +203,9 @@ where
     /// the removed entry.
     /// Note that this only unlinks the entry from the list, it doesn't
     /// remove it from the array.
-    fn pop_back(&mut self) -> u16 {
+    fn pop_back(&mut self) -> usize {
         let old_tail = self.tail;
-        let new_tail = self.entries[old_tail as usize].prev;
+        let new_tail = self.entries[old_tail].prev;
         self.tail = new_tail;
         old_tail
     }
@@ -222,20 +222,20 @@ where
     /// Remove an entry from the linked list.
     /// Note that this only unlinks the entry from the list; it doesn't
     /// remove it from the array.
-    fn remove(&mut self, index: u16) {
-        let prev = self.entries[index as usize].prev;
-        let next = self.entries[index as usize].next;
+    fn remove(&mut self, index: usize) {
+        let prev = self.entries[index].prev;
+        let next = self.entries[index].next;
 
         if index == self.head {
             self.head = next;
         } else {
-            self.entries[prev as usize].next = next;
+            self.entries[prev].next = next;
         }
 
         if index == self.tail {
             self.tail = prev;
         } else {
-            self.entries[next as usize].prev = prev;
+            self.entries[next].prev = prev;
         }
     }
 }
@@ -244,7 +244,7 @@ where
 /// to least-recently-used.
 struct IterMut<'a, A: 'a + Array> {
     cache: &'a mut LRUCache<A>,
-    pos: u16,
+    pos: usize,
     done: bool,
 }
 
@@ -253,7 +253,7 @@ where
     T: 'a,
     A: 'a + Array<Item = Entry<T>>,
 {
-    type Item = (u16, &'a mut T);
+    type Item = (usize, &'a mut T);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {
@@ -262,7 +262,7 @@ where
 
         // Use a raw pointer here because the compiler doesn't know that
         // subsequent calls cannot alias
-        let entry = unsafe { &mut *(&mut self.cache.entries[self.pos as usize] as *mut Entry<T>) };
+        let entry = unsafe { &mut *(&mut self.cache.entries[self.pos] as *mut Entry<T>) };
 
         let index = self.pos;
 
