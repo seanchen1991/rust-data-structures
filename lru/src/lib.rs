@@ -102,15 +102,16 @@ where
         self.entries.get_mut(self.head as usize).map(|e| &mut e.val)
     }
 
-    /// Performs a lookup on the cache with the given test routine.
+    /// Performs a lookup on the cache with the given predicate.
     /// Touches the result on a hit.
-    pub fn lookup<F, R>(&mut self, mut test: F) -> Option<R>
+    pub fn lookup<F, R>(&mut self, mut pred: F) -> Option<R>
     where
         F: FnMut(&mut T) -> Option<R>,
     {
         let mut result = None;
-        for (i, candidate) in self.iter_mut() {
-            if let Some(r) = test(candidate) {
+        
+        for (i, entry) in self.iter_mut() {
+            if let Some(r) = pred(entry) {
                 result = Some((i, r));
                 break;
             }
@@ -135,7 +136,7 @@ where
             Some((i, _)) => {
                 self.touch_index(i);
                 true
-            }
+            },
             None => false,
         }
     }
