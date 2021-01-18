@@ -146,6 +146,8 @@ where
     fn touch_index(&mut self, index: usize) {
         if index != self.head {
             self.remove(index);
+            // need to increment length here since `remove` decrements length
+            self.length += 1;
             self.push_front(index);
         }
     }
@@ -348,6 +350,8 @@ mod test {
         cache.insert(7);
         cache.insert(8);
         cache.insert(9);
+
+        assert_eq!(cache.len(), 4);
         assert_eq!(
             items(&mut cache),
             [9, 8, 7, 6],
@@ -382,6 +386,8 @@ mod test {
         let mut cache = TestCache::default();
         cache.insert(1);
         cache.clear();
+        
+        assert_eq!(cache.len(), 0);
         assert_eq!(items(&mut cache), [], "All items evicted");
 
         cache.insert(1);
