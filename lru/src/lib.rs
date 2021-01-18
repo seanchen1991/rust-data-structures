@@ -17,6 +17,8 @@ pub struct LRUCache<A: Array> {
     head: usize,
     /// Index of the last entry in the cache.
     tail: usize,
+    /// Number of entries in the cache.
+    length: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -35,6 +37,7 @@ impl<A: Array> Default for LRUCache<A> {
             entries: ArrayVec::new(),
             head: 0,
             tail: 0,
+            length: 0,
         };
 
         assert!(
@@ -56,6 +59,7 @@ where
             entries: self.entries.clone(),
             head: self.head,
             tail: self.tail,
+            length: self.length,
         }
     }
 }
@@ -80,11 +84,11 @@ where
 {
     /// Returns the number of elements in the cache
     pub fn len(&self) -> usize {
-        self.entries.len()
+        self.length
     }
 
     pub fn is_empty(&self) -> bool {
-        self.entries.len() == 0
+        self.length == 0
     }
 
     /// Returns the most-recently-used entry (the one at the head index)
@@ -169,13 +173,18 @@ where
             prev: 0,
             next: 0,
         };
-
-        let new_head = if self.entries.len() == self.entries.capacity() {
+        
+        // cache is at full capacity 
+        let new_head = if self.length == self.entries.capacity() {
+            // get the index of the oldest entry 
             let last_index = self.pop_back();
+            // overwrite the oldest entry with the new entry 
             self.entries[last_index] = entry;
+            // return the index of the newly-overwritten entry
             last_index
         } else {
             self.entries.push(entry);
+            self.length += 1;
             self.entries.len() - 1
         };
 
@@ -185,9 +194,12 @@ where
     /// Clear all entries from the cache.
     pub fn clear(&mut self) {
         self.entries.clear();
+        self.head = 0;
+        self.tail = 0;
+        self.length = 0;
     }
 
-    /// Insert a new entry at the head of the cache.
+    /// Sets the entry at the given index as the head of the list.
     fn push_front(&mut self, index: usize) {
         if self.entries.len() == 1 {
             self.tail = index;
@@ -214,7 +226,7 @@ where
     fn iter_mut(&mut self) -> IterMut<A> {
         IterMut {
             pos: self.head,
-            done: self.entries.is_empty(),
+            done: self.is_empty(),
             cache: self,
         }
     }
@@ -223,9 +235,11 @@ where
     /// Note that this only unlinks the entry from the list; it doesn't
     /// remove it from the array.
     fn remove(&mut self, index: usize) {
+        assert!(self.length > 0);
+
         let prev = self.entries[index].prev;
         let next = self.entries[index].next;
-
+        
         if index == self.head {
             self.head = next;
         } else {
@@ -237,6 +251,8 @@ where
         } else {
             self.entries[next].prev = prev;
         }
+
+        self.length -= 1;
     }
 }
 
