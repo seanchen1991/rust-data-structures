@@ -14,18 +14,17 @@ impl UnionFind {
     
     /// Given the index of an element in the set, finds
     /// and returns the index of the element's parent
-    pub fn find(&mut self, idx: usize) -> usize {
+    pub fn find(&mut self, needle: usize) -> usize {
         // check if the element at the input `idx` matches 
         // the input `idx`; if it does, then we've found the
         // group of the element at this `idx`
-        let (parent, _) = self.mappings[idx];
-
-        if parent != idx {
+        if self.mappings[needle].0 != needle {
+            let parent = self.mappings[needle].0;
             let ancestor = self.find(parent);
-            self.mappings[idx] = self.mappings[ancestor];
+            self.mappings[needle] = self.mappings[ancestor];
         }
         
-        parent
+        self.mappings[needle].0
     }
     
     /// Finds the respective roots of `a` and `b` 
