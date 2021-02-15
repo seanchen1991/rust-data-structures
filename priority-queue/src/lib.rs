@@ -31,9 +31,10 @@ impl<T: Ord> PriorityQueue<T> {
 
     /// Returns a reference to the priority value
     pub fn get_priority(&self) -> Option<&T> {
-        match self.len() {
-            0 => None,
-            _ => Some(&self.storage[0]),
+        if self.len() > 0 {
+            Some(&self.storage[0])
+        } else {
+            None
         }
     }
 
@@ -59,6 +60,7 @@ impl<T: Ord> PriorityQueue<T> {
                 let rv = self.storage.swap_remove(0);
                 // Sift the element at index 0 down to an appropriate spot
                 self.sift_down(0);
+                
                 Some(rv)
             }
         }
@@ -69,6 +71,7 @@ impl<T: Ord> PriorityQueue<T> {
     fn bubble_up(&mut self, start: usize, mut pos: usize) {
         while pos > start {
             let parent = (pos - 1) / 2;
+            
             if (self.comparator)(&self.storage[pos], &self.storage[parent]) == Ordering::Greater {
                 self.storage.swap(pos, parent);
                 pos = parent;
@@ -83,14 +86,17 @@ impl<T: Ord> PriorityQueue<T> {
     fn sift_down(&mut self, mut pos: usize) {
         let end = self.len() - 1;
         let mut child = 2 * pos + 1;
+        
         while child <= end {
             let right = child + 1;
+            
             if right <= end
                 && (self.comparator)(&self.storage[child], &self.storage[right])
                     != Ordering::Greater
             {
                 child = right;
             }
+            
             if (self.comparator)(&self.storage[pos], &self.storage[child]) == Ordering::Less {
                 self.storage.swap(pos, child);
                 pos = child;
@@ -106,6 +112,7 @@ impl<T: Ord> PriorityQueue<T> {
     fn iter(self) -> QueueIter<T> {
         let mut iter = QueueIter { values: Vec::new() };
         iter.populate_iter(self);
+        
         iter
     }
 }
