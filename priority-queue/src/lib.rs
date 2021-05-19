@@ -32,7 +32,7 @@ impl<T: Ord> PriorityQueue<T> {
     /// Returns a reference to the priority value
     pub fn get_priority(&self) -> Option<&T> {
         if self.len() > 0 {
-            Some(&self.storage[0])
+            Some(&self.storage.first().unwrap())
         } else {
             None
         }
@@ -50,7 +50,7 @@ impl<T: Ord> PriorityQueue<T> {
     }
 
     /// Removes and returns the owned priority value
-    pub fn delete(&mut self) -> Option<T> {
+    pub fn pop(&mut self) -> Option<T> {
         match self.len() {
             0 => None,
             1 => self.storage.pop(),
@@ -125,10 +125,10 @@ impl<T: Ord> Default for PriorityQueue<T> {
 }
 
 impl<T: Ord> QueueIter<T> {
-    /// Populate QueueIter by repeatedly calling `delete`
+    /// Populate QueueIter by repeatedly calling `pop`
     /// until the queue is empty
     fn populate_iter(&mut self, mut pq: PriorityQueue<T>) {
-        while let Some(val) = pq.delete() {
+        while let Some(val) = pq.pop() {
             self.values.push(val);
         }
 
@@ -180,11 +180,11 @@ fn test_default_delete_correctness() {
     assert_eq!(pq.len(), expected.len());
 
     for el in expected {
-        assert_eq!(el, pq.delete().unwrap());
+        assert_eq!(el, pq.pop().unwrap());
     }
 
     assert_eq!(pq.len(), 0);
-    assert_eq!(pq.delete(), None);
+    assert_eq!(pq.pop(), None);
 }
 
 #[test]
@@ -201,12 +201,12 @@ fn test_custom_delete_correctness() {
     assert_eq!(pq.len(), expected.len());
 
     for el in expected {
-        assert_eq!(el, pq.delete().unwrap());
+        assert_eq!(el, pq.pop().unwrap());
         println!("{:?}", pq.storage);
     }
 
     assert_eq!(pq.len(), 0);
-    assert_eq!(pq.delete(), None);
+    assert_eq!(pq.pop(), None);
 }
 
 #[test]
