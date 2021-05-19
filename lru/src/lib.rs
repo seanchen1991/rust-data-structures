@@ -108,22 +108,14 @@ where
     where
         F: FnMut(&mut T) -> Option<R>,
     {
-        let mut result = None;
-        
         for (i, entry) in self.iter_mut() {
             if let Some(r) = pred(entry) {
-                result = Some((i, r));
-                break;
+                self.touch_index(i);
+                return Some(r);
             }
         }
 
-        match result {
-            None => None,
-            Some((i, r)) => {
-                self.touch_index(i);
-                Some(r)
-            }
-        }
+        None
     }
 
     /// Touches the first item in the cache that matches the given
