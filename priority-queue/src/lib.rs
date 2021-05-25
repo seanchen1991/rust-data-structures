@@ -15,7 +15,7 @@ struct PriorityQueue<T> {
 // T needs to implement the `Ord` trait, so there must exist
 // an ordering over T 
 // `<T: Ord>` is a trait bound 
-impl<T> PriorityQueue<T> {
+impl<T: Ord> PriorityQueue<T> {
     /// New PriorityQueue instance with specified comparator
     pub fn new_with(comparator: fn(&T, &T) -> Ordering) -> Self {
         PriorityQueue {
